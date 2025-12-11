@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Werwolf</title>
+</head>
+
+<body>
+  <h1>Hello!</h1>
+  <p>Lets get werwolf started</p>
+  <p>Please enter your name</p>
+  <form id="nameForm" action="/add-user" method="POST">
+    <label>Your name:</label>
+    <input type="text" name="username" id="username">
+    <button type="submit">Add Name</button>
+  </form>
+  <h2>Current Users:</h2>
+    <ul>
+        {{users}}
+    </ul>
+  <p>Please press this when all players are added:</p>
+  <form id="startForm" action="/start-game" method="POST">
+    <button type="submit">Start Game</button>
+  </form>
+</body>
+<!-- <script>
+  const form = document.getElementById("nameForm");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault(); // prevent default form submission
+
+    const username = document.getElementById("username").value;
+    if (username) {
+      // Open a new tab with the username as part of the URL
+      window.open(`/${encodeURIComponent(username)}`, "_blank");
+    }
+  });
+</script> -->
+
+</html>
