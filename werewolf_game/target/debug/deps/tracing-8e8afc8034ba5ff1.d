@@ -1,0 +1,12 @@
+C:\Users\laura\Werewolf-Rust-SEP\werewolf_game\target\debug\deps\tracing-8e8afc8034ba5ff1.d: C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\lib.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\macros.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\dispatcher.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\field.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\instrument.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\level_filters.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\span.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\subscriber.rs
+
+C:\Users\laura\Werewolf-Rust-SEP\werewolf_game\target\debug\deps\libtracing-8e8afc8034ba5ff1.rmeta: C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\lib.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\macros.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\dispatcher.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\field.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\instrument.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\level_filters.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\span.rs C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\subscriber.rs
+
+C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\lib.rs:
+C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\macros.rs:
+C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\dispatcher.rs:
+C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\field.rs:
+C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\instrument.rs:
+C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\level_filters.rs:
+C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\span.rs:
+C:\Users\laura\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tracing-0.1.43\src\subscriber.rs:
