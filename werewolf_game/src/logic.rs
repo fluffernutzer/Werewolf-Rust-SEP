@@ -14,12 +14,16 @@ pub struct Spieler{
 }
 pub struct Game {
     pub players: Vec<Spieler>,
+    pub phase: Phase,
+    pub runden: u32,
 }
 
 impl Game {
     pub fn new() -> Self {
         Game {
             players: Vec::new(),
+            phase: Phase::Tag,
+            runden: 1,
         }
     }
 
