@@ -1,86 +1,93 @@
-
+use std::io;
 use std::fmt;
-
-
-
-#[derive(Debug)]
-enum Team {
-    Dorf,
-    Werwölfe,
+#[derive(Debug, Clone)]
+pub enum Phase {
+    Tag,
+    Nacht,
 }
-#[derive(Debug)]
-enum Role{
+#[derive(Debug,Clone)]
+pub enum Rolle {
     Dorfbewohner,
     Werwolf,
     Seher,
 }
+#[derive(Debug, Clone)]
+pub struct Spieler {
+    pub name: String,
+    pub rolle: Rolle,
+    pub lebend: bool,
+}
+#[derive(Debug, Clone)]
+pub struct Game {
+    pub players: Vec<Spieler>,
+    pub phase: Phase,
+    pub runden: u32,
+}
 
-impl fmt::Display for Role{
-    fn fmt (&self, f:&mut fmt ::Formatter)->fmt ::Result{
-        match self{
-            Role::Dorfbewohner=> write!(f,"Dorfbewohner"),
-            Role::Seher=>write!(f,"Seher"),
-            Role::Werwolf=>write!(f,"Werwolf"),
+impl Spieler {
+    pub fn new(name: String, rolle: Rolle) -> Self {
+        Spieler {
+            name,
+            rolle,
+            lebend: true,
         }
     }
 }
-#[derive(Debug)]
-struct Player{
-    role:Role,
-    alive:bool,
-    awake:bool,
-    team:Team,
-}
 
-
-impl Player{
-    fn is_alive(&self)->bool{
-        return self.alive;
-    }
-    fn gets_killed (&mut self){
-        self.alive=false;
-    }
-    fn falls_asleep(&mut self){
-        self.awake=false;
-    }
-    fn wakes_up(&mut self){
-        self.awake=true;
-    }
-    fn get_team(&self)->&Team{
-        return &self.team;
-    }
-    //special powers
-    fn attack(&self, victim:&mut Player){
-        match self.role{
-            Role::Werwolf=>{
-                match victim.role{
-                    Role::Werwolf=>{println!("Du kannst nicht einen Werwolf töten!");}
-                    _=> {
-                    if victim.is_alive(){
-                    victim.gets_killed();
-                    println!("{} wurde von einem Werwolf getötet!", victim.role);
-                    }}
-                }
-            }
-            _ =>{
-                println!("Nur Werwölfe können jemanden umbringen!");
-            }
+impl Game {
+    pub fn new() -> Self {
+        Game {
+            players: Vec::new(),
+            phase: Phase::Tag,
+            runden: 1,
         }
     }
-    fn see (&self, revealed_player:&Player){
-        match self.role{
-            Role::Seher=>{
-                if revealed_player.is_alive(){
-                    match revealed_player.team{
-                        Team::Dorf=> println!("Die Person ist gut!"),
-                        Team::Werwölfe=>println!("Die Person ist böse!"),
-                    }
-                }
-            }
-            _=>{
-                println!("Nur der Seher darf sich die Karte eines Mitspielers ansehen!");
-            }
+
+    pub fn add_player(&mut self, name: String) {
+        self.players.push(Spieler {
+            name,
+            rolle: Rolle::Dorfbewohner,
+            lebend: true,
+        });
+    }
+
+    pub fn rolle_von(&self, name: &str) -> Option<&Rolle> {
+        self.players
+            .iter()
+            .find(|p| p.name == name)
+            .map(|p| &p.rolle)
+    }
+    pub fn verteile_rollen(&mut self) {
+        if self.players.is_empty() {
+            return;
+        }
+        self.players[0].rolle = Rolle::Werwolf;
+
+        if self.players.len() > 1 {
+            self.players[1].rolle = Rolle::Seher;
         }
     }
+    pub fn naechste_phase(&mut self) {
+        self.phase = match self.phase {
+            Phase::Tag => Phase::Nacht,
+            Phase::Nacht => {
+                self.runden += 1;
+                Phase::Tag
+            }
+        };
+    }
+    pub fn tag_lynchen(&mut self, name: &str) {
+        println!("(TAG) Dorf lyncht {}", name);
+    }
+
+    pub fn werwolf_toetet(&mut self, name: &str) {
+        println!("(NACHT) Werwolf tötet {}", name);
+    }
+
+    pub fn seher_schaut(&self, name: &str) -> &Rolle {
+        println!("(NACHT) Seher überprüft {}", name);
+        return self.rolle_von(name).unwrap();
+    }
+    
 }
 
