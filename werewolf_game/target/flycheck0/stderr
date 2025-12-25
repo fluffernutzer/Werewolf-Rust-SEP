@@ -1,8 +1,0 @@
-error: failed to parse lock file at: C:\Users\laura\Werewolf-Rust-SEP\werewolf_game\Cargo.lock
-
-Caused by:
-  TOML parse error at line 85, column 9
-     |
-  85 | <<<<<<< HEAD
-     |         ^
-  key with no value, expected `=`
