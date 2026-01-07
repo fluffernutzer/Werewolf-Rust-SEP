@@ -85,14 +85,56 @@ async fn index(State(state): State<AppState>) -> Html<String> {
 /* async fn submit_name(Form(form): Form<NameForm>) -> Html<String> {
     Html(format!("<h1>Hello, {}!</h1>", form.username))
 } */
-async fn show_user(Path(username): Path<String>) -> Html<String> {
+async fn show_user(Path(username): Path<String>, State(state): State<AppState>) -> Html<String> {
     let template = tokio::fs::read_to_string("user.html")
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
+
     let safe_username = htmlescape::encode_minimal(&username);
-    let user_page = template.replace("{{username}}", &safe_username);
+    let game = state.game.lock().await;
+
+    let rolle = game.players.iter().find(|p| p.name == username).map(|p| &p.rolle);
+
+    let (rolle_text, action_html) = match rolle {
+        Some(crate::logic::Rolle::Werwolf) => (
+            "Werwolf".to_string(),
+            format!(
+                r#"
+                <h2>Werwolf-Aktion</h2>
+                <form action="/nacht/werwolf" method="post">
+                    <input type="hidden" name="actor" value="{username}">
+                    <input name="target" placeholder="Opfer">
+                    <button>Töten</button>
+                </form>
+                "#,
+                username = safe_username
+            )
+        ),
+        Some(crate::logic::Rolle::Seher) => (
+            "Seher".to_string(),
+            format!(
+                r#"
+                <h2>Seher-Aktion</h2>
+                <form action="/nacht/seher" method="post">
+                    <input type="hidden" name="actor" value="{username}">
+                    <input name="target" placeholder="Spieler">
+                    <button>Schauen</button>
+                </form>
+                "#,
+                username = safe_username
+            )
+        ),
+        _ => ("Dorfbewohner".to_string(), String::new()),
+    };
+
+    let user_page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", &rolle_text)
+        .replace("{{aktion}}", &action_html);
+
     Html(user_page)
 }
+
 async fn add_user(State(state): State<AppState>, Form(form): Form<NameForm>) -> Redirect {
     let mut started = state.game_started.lock().await;
     if *started {
@@ -107,7 +149,7 @@ async fn add_user(State(state): State<AppState>, Form(form): Form<NameForm>) -> 
 }
 async fn start_game(State(state): State<AppState>) -> Html<String> {
     let mut started = state.game_started.lock().await;
-    *started = true;
+    *started = true; 
 
     let users = state.game.lock().await;
     for p in users.players.iter() {

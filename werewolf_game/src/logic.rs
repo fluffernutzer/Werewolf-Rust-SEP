@@ -30,7 +30,7 @@ impl Game {
     pub fn add_player(&mut self, name: String) {
         self.players.push(Spieler {
             name,
-            rolle: Rolle::Dorfbewohner,
+            rolle: Rolle::Werwolf,
             lebend: true,
         });
     }
@@ -44,7 +44,7 @@ impl Game {
 
     pub fn dorf_toetet(&mut self, name: &str) {
         if let Some(p) = self.players.iter_mut().find(|p| p.name == name) {
-            p.lebend = false; // Spieler stirbt
+            p.lebend = false;
             println!("(TAG) {} wurde getötet", name);
         }
     }
