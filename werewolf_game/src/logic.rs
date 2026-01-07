@@ -34,4 +34,18 @@ impl Game {
             lebend: true,
         });
     }
+
+    pub fn werwolf_toetet(&mut self, name: &str) {
+    if let Some(p) = self.players.iter_mut().find(|p| p.name == name) {
+        p.lebend = false;
+        println!("(NACHT) {} wurde vom Werwolf getötet", name);
+        }
+    }
+
+    pub fn dorf_toetet(&mut self, name: &str) {
+        if let Some(p) = self.players.iter_mut().find(|p| p.name == name) {
+            p.lebend = false; // Spieler stirbt
+            println!("(TAG) {} wurde getötet", name);
+        }
+    }
 }
