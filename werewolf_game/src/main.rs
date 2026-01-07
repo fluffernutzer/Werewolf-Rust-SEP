@@ -1,5 +1,8 @@
 #![forbid(unsafe_code)]
 mod logic;
+mod tag_nacht;
+use crate::tag_nacht::{check_win, advance_phase};
+
 use axum::{
     Router,
     extract::{Form, Path, State},
@@ -23,6 +26,13 @@ use crate::logic::Game;
 struct NameForm {
     username: String,
 }
+
+#[derive(Deserialize)]
+struct ActionForm{
+    actor: String,
+    target: String,
+}
+
 #[derive(Clone)]
 struct AppState {
     game: Arc<Mutex<Game>>,
@@ -40,6 +50,8 @@ async fn main() {
         .route("/add-user", post(add_user))
         .route("/start-game", post(start_game))
         .route("/:username", get(show_user))
+        .route("/nacht/werwolf", post(werwolf_action))
+        .route("/tag", post(tag_action))
         .with_state(state);
 
     println!("Running on http://127.0.0.1:7878");
@@ -128,4 +140,40 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
 
 Html(html) */
 
+}
+
+async fn werwolf_action(
+    State(state): State<AppState>,
+    Form(form): Form<ActionForm>,
+) -> Redirect {
+    let mut game = state.game.lock().await;
+
+    game.werwolf_toetet(&form.target);
+
+    if let Some(winner) = tag_nacht::check_win(&game){
+        println!("SPIEL ENDE: {}", winner);
+    } else {
+        tag_nacht::advance_phase(&mut game);
+    }
+
+    Redirect::to(&format!("/{}", form.actor))
+}
+
+async fn tag_action(
+    State(state): State<AppState>,
+    Form(form): Form<ActionForm>,
+) -> Redirect {
+    let mut game = state.game.lock().await;
+
+    if let crate::logic::Phase::Tag = game.phase {
+        game.dorf_toetet(&form.target);
+
+        if let Some(winner) = tag_nacht::check_win(&game) {
+            println!("SPIEL ENDE: {}", winner);
+        } else {
+            tag_nacht::advance_phase(&mut game);
+        }
+    }
+
+    Redirect::to("/")
 }
