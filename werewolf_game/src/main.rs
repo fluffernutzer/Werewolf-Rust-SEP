@@ -1,5 +1,8 @@
 #![forbid(unsafe_code)]
-mod logic;
+pub mod roles;
+pub mod logic;
+
+
 use axum::{
     Router,
     extract::{Form, Path, State},
@@ -94,7 +97,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
     let rolle = game.rolle_von(&username);
 
     let (rolle_text, action_html) = match rolle {
-    Some(logic::Rolle::Werwolf) => (
+    Some(roles::Rolle::Werwolf) => (
         "Werwolf".to_string(),
         format!(
             r#"
@@ -108,7 +111,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
             username = safe_username
         ),
     ),
-    Some(logic::Rolle::Seher) => (
+    Some(roles::Rolle::Seher) => (
         "Seher".to_string(),
         format!(
             r#"
@@ -208,9 +211,23 @@ async fn seher_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
 ) -> Redirect{
-    let game = state.game.lock().await;
-    let rolle = game.seher_schaut(&form.target);
-    println!("Seher '{}' sieht, dass '{}' die Rolle {:?} hat", form.actor, form.target, rolle);
+    let mut game = state.game.lock().await;
+    let rolle_opt = game.seher_schaut(&form.target);
+    
+    if let Some(p) =  rolle_opt {
+        game.last_seher_result = Some((form.target.clone(), p));
+
+    println!("Seher '{}' sieht, dass '{}' die Rolle {:?} hat", form.actor, form.target, p);
+}
+
     Redirect::to(&format!("/{}", form.actor))
 }
 
+/*async fn jaeger_action(
+    State(state):State<AppState>,
+    Form(form):Form<ActionForm>,
+)-> Redirect{
+    let mut game=state.game.lock().await;
+    game.jaeger_ziel=Some(form.target.clone());
+    Redirect::to(&format!("/{}",form.actor))
+}*/
