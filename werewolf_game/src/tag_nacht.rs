@@ -1,36 +1,7 @@
 use crate::logic::{Game, Rolle, Phase};
 use std::io;
 
-pub fn run_game_loop(game: &mut Game) {
-    println!("=== Werwolf: Game Loop gestartet ===");
-
-    loop {
-        println!("\n=== Runde {} ===", game.runden);
-        println!("Phase: {:?}", game.phase);
-
-        match game.phase {
-            Phase::Tag => {
-                println!("TAG: Diskussion & Abstimmung");
-                if check_win(game) {
-                    break;
-                }
-                game.phase = Phase::Nacht;
-            }
-            Phase::Nacht => {
-                println!("NACHT: Werwölfe & Seher");
-                if check_win(game) {
-                    break;
-                }
-                game.phase = Phase::Tag;
-                game.runden += 1;
-            }
-        }
-    }
-
-    println!("=== Spiel beendet ===");
-}
-
-fn check_win(game: &Game) -> bool {
+pub fn check_win(game: &Game) -> Option<String> {
     let mut dorf = 0;
     let mut wolfs = 0;
 
@@ -44,14 +15,22 @@ fn check_win(game: &Game) -> bool {
     }
 
     if wolfs == 0 {
-        println!("🎉 Dorf gewinnt!");
-        return true;
+        return Some("Dorf gewinnt".to_string());
     }
 
     if wolfs >= dorf {
-        println!("🐺 Werwölfe gewinnen!");
-        return true;
+        return Some("Werwölfe gewinnen".to_string());
     }
 
-    false
+    None
+}
+
+pub fn advance_phase(game: &mut Game) {
+    game.phase = match game.phase {
+        Phase::Tag => Phase::Nacht,
+        Phase::Nacht => {
+            game.runden += 1;
+            Phase::Tag
+        }
+    };
 }

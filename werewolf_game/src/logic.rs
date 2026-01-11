@@ -48,17 +48,32 @@ impl Game {
     pub fn add_player(&mut self, name: String) {
         self.players.push(Spieler {
             name,
-            rolle: Rolle::Dorfbewohner,
+            rolle: Rolle::Werwolf,
             lebend: true,
         });
     }
 
+    pub fn werwolf_toetet(&mut self, name: &str) {
+    if let Some(p) = self.players.iter_mut().find(|p| p.name == name) {
+        p.lebend = false;
+        println!("(NACHT) {} wurde vom Werwolf getötet", name);
+        }
+    }
+
+    pub fn dorf_toetet(&mut self, name: &str) {
+        if let Some(p) = self.players.iter_mut().find(|p| p.name == name) {
+            p.lebend = false;
+            println!("(TAG) {} wurde getötet", name);
+        }
+    }
+  
     pub fn rolle_von(&self, name: &str) -> Option<&Rolle> {
         self.players
             .iter()
             .find(|p| p.name == name)
             .map(|p| &p.rolle)
     }
+  
     pub fn verteile_rollen(&mut self) {
         if self.players.is_empty() {
             return;
@@ -69,6 +84,7 @@ impl Game {
             self.players[1].rolle = Rolle::Seher;
         }
     }
+  
     pub fn naechste_phase(&mut self) {
         self.phase = match self.phase {
             Phase::Tag => Phase::Nacht,
@@ -78,14 +94,7 @@ impl Game {
             }
         };
     }
-    pub fn tag_lynchen(&mut self, name: &str) {
-        println!("(TAG) Dorf lyncht {}", name);
-    }
-
-    pub fn werwolf_toetet(&mut self, name: &str) {
-        println!("(NACHT) Werwolf tötet {}", name);
-    }
-
+ 
     pub fn seher_schaut(&self, name: &str) -> &Rolle {
         println!("(NACHT) Seher überprüft {}", name);
         return self.rolle_von(name).unwrap();
