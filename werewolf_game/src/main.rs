@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
 pub mod roles;
-pub mod logic;
-
+mod logic;
+mod tag_nacht;
+use crate::tag_nacht::{check_win, advance_phase};
 
 use axum::{
     Router,
@@ -26,6 +27,7 @@ use crate::logic::{Game,Phase};
 struct NameForm {
     username: String,
 }
+
 #[derive(Clone)]
 struct AppState {
     game: Arc<Mutex<Game>>,
@@ -48,8 +50,8 @@ async fn main() {
         .route("/add-user", post(add_user))
         .route("/start-game", post(start_game))
         .route("/:username", get(show_user))
-        .route("/tag", post(tag_action))
         .route("/nacht/werwolf", post(werwolf_action))
+        .route("/tag", post(tag_action))
         .route("/nacht/seher", post(seher_action))
         .with_state(state);
 
@@ -86,6 +88,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
     let template = tokio::fs::read_to_string("user.html")
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
+
     let safe_username = htmlescape::encode_minimal(&username);
     let game = state.game.lock().await;
     let rolle_text = match game.rolle_von(&username) {
@@ -134,6 +137,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
 
     Html(user_page)
 }
+
 async fn add_user(State(state): State<AppState>, Form(form): Form<NameForm>) -> Redirect {
     let mut started = state.game_started.lock().await;
     if *started {
@@ -183,28 +187,41 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
 
     Html(html) */
 }
-async fn tag_action(
-    State(state): State<AppState>,
-    Form(form): Form<ActionForm>,
-) -> Redirect {
-    let mut game = state.game.lock().await;
-    if let Phase::Tag = game.phase {
-        game.tag_lynchen(&form.target);
-        game.naechste_phase();
-    }
-    Redirect::to("/")
-}
 
 async fn werwolf_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
 ) -> Redirect {
-    println!("actor = '{}', target = '{}'", form.actor, form.target);
     let mut game = state.game.lock().await;
-    
-        game.werwolf_toetet(&form.target);
-    
+
+    game.werwolf_toetet(&form.target);
+
+    if let Some(winner) = tag_nacht::check_win(&game){
+        println!("SPIEL ENDE: {}", winner);
+    } else {
+        tag_nacht::advance_phase(&mut game);
+    }
+
     Redirect::to(&format!("/{}", form.actor))
+}
+
+async fn tag_action(
+    State(state): State<AppState>,
+    Form(form): Form<ActionForm>,
+) -> Redirect {
+    let mut game = state.game.lock().await;
+
+    if let crate::logic::Phase::Tag = game.phase {
+        game.dorf_toetet(&form.target);
+
+        if let Some(winner) = tag_nacht::check_win(&game) {
+            println!("SPIEL ENDE: {}", winner);
+        } else {
+            tag_nacht::advance_phase(&mut game);
+        }
+    }
+
+    Redirect::to("/")
 }
 
 async fn seher_action(
