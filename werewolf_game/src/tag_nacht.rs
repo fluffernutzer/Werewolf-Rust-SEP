@@ -34,4 +34,3 @@ pub fn advance_phase(game: &mut Game) {
         }
     };
 }
-
