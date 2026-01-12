@@ -2,7 +2,7 @@
 pub mod roles;
 mod logic;
 mod tag_nacht;
-use crate::tag_nacht::{check_win, advance_phase};
+// use crate::tag_nacht::{check_win, advance_phase};
 
 use axum::{
     Router,
@@ -196,11 +196,11 @@ async fn werwolf_action(
 
     game.werwolf_toetet(&form.target);
 
-    if let Some(winner) = tag_nacht::check_win(&game){
+    /*if let Some(winner) = tag_nacht::check_win(&game){
         println!("SPIEL ENDE: {}", winner);
     } else {
         tag_nacht::advance_phase(&mut game);
-    }
+    } */
 
     Redirect::to(&format!("/{}", form.actor))
 }
@@ -212,14 +212,15 @@ async fn tag_action(
     let mut game = state.game.lock().await;
 
     if let crate::logic::Phase::Tag = game.phase {
-        game.dorf_toetet(&form.target);
+        game.tag_lynchen(&form.target);
 
-        if let Some(winner) = tag_nacht::check_win(&game) {
+        /* if let Some(winner) = tag_nacht::check_win(&game) {
             println!("SPIEL ENDE: {}", winner);
         } else {
             tag_nacht::advance_phase(&mut game);
-        }
-    }
+
+    } */
+}
 
     Redirect::to("/")
 }

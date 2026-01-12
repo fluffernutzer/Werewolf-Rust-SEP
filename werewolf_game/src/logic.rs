@@ -1,4 +1,3 @@
-
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use crate::roles::Rolle;
@@ -38,7 +37,6 @@ pub struct Game {
     pub jaeger_ziel:Option<String>,
     pub last_seher_result:Option<(String,Rolle)>,
 }
-
 
 impl Spieler {
     pub fn new(name: String, team: Team, rolle: Rolle, lebend:bool) -> Self {

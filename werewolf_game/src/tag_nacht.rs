@@ -1,7 +1,8 @@
-use crate::logic::{Game, Rolle, Phase};
+use crate::logic::{Game, Phase};
+use crate::roles::Rolle;
 use std::io;
 
-pub fn check_win(game: &Game) -> Option<String> {
+/* pub fn check_win(game: &Game) -> Option<String> {
     let mut dorf = 0;
     let mut wolfs = 0;
 
@@ -23,9 +24,9 @@ pub fn check_win(game: &Game) -> Option<String> {
     }
 
     None
-}
+} */
 
-pub fn advance_phase(game: &mut Game) {
+/* pub fn advance_phase(game: &mut Game) {
     game.phase = match game.phase {
         Phase::Tag => Phase::Nacht,
         Phase::Nacht => {
@@ -33,4 +34,4 @@ pub fn advance_phase(game: &mut Game) {
             Phase::Tag
         }
     };
-}
+} */
