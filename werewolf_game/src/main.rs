@@ -79,6 +79,10 @@ async fn index(State(state): State<AppState>) -> Html<String> {
     Html(page)
 }
 
+
+/* async fn submit_name(Form(form): Form<NameForm>) -> Html<String> {
+    Html(format!("<h1>Hello, {}!</h1>", form.username))
+} */
 async fn show_user(Path(username): Path<String>, State(state): State<AppState>) -> Html<String> {
     let template = tokio::fs::read_to_string("user.html")
         .await

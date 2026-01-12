@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Werwolf – Nachtphase</title>
+</head>
+<body>
+    <h1>Werwolf Spiel – Nachtphase</h1>
+    <p>Phase: {{phase}}</p>
+
+    <h2>Lebende Spieler:</h2>
+    <ul>
+        {{players}}
+    </ul>
+
+    <p>Rolle: {{rolle}}</p>
+    <p>{{message}}</p>
+
+    {% if rolle == "Werwolf" or rolle == "Seher" %}
+    <form action="/night-action" method="post">
+        <input type="hidden" name="username" value="{{username}}">
+        <label>Spieler auswählen:</label>
+        <input type="text" name="target" required>
+        <button type="submit">Aktion ausführen</button>
+    </form>
+    {% else %}
+    <p>Keine Aktion möglich. Schlafphase...</p>
+    {% endif %}
+</body>
+</html>
