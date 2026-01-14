@@ -6,7 +6,7 @@ use crate::roles::Team;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Phase {
     Tag,
-    Nacht,
+    //Nacht,
     AmorPhase,
     WerwölfePhase,
     SeherPhase,
@@ -87,17 +87,27 @@ impl Game {
             return Err ("Es müssen mindestens 3 Spieler vorhanden sein.".to_string());
         }
         let anzahl_werwoelfe= anzahl_spieler/3;
-        let anzahl_dorfbewohner= anzahl_spieler-anzahl_werwoelfe-1;
+        //kann noch erweitert werden für mehr rollen
+        let rollen_steps=vec![
+            (4, Rolle::Seher),
+            (5,Rolle::Hexe),
+            (6,Rolle::Amor),
+            (7,Rolle::Jäger),
+        ];
 
         let mut roles=Vec::new();
 
         for _ in 0..anzahl_werwoelfe{
             roles.push(Rolle::Werwolf);
         }
-        for _ in 0..anzahl_dorfbewohner{
-            roles.push(Rolle::Dorfbewohner);
+       for (min_anzahl,rolle)in rollen_steps{
+        if anzahl_spieler>=min_anzahl{
+            roles.push(rolle);
         }
-        roles.push(Rolle::Seher);
+       }
+       while roles.len()<anzahl_spieler{
+        roles.push(Rolle::Dorfbewohner);
+       }
 
         roles.shuffle(&mut rng);
 
@@ -114,17 +124,6 @@ impl Game {
             .find(|p| p.name == name)
             .map(|p| &p.rolle)
     }
-  /*  pub fn verteile_rollen(&mut self) {
-        if self.players.is_empty() {
-            return;
-        }
-        self.players[0].rolle = Rolle::Werwolf;
-
-        if self.players.len() > 1 {
-            self.players[1].rolle = Rolle::Seher;
-        }
-    }*/
-
 
     pub fn naechste_phase(&mut self) {
         self.phase = match self.phase {
@@ -142,10 +141,50 @@ impl Game {
                 self.runden += 1;
                 Phase::Tag
             }
-            Phase::Nacht=>Phase::WerwölfePhase,
+            //Phase::Nacht=>Phase::WerwölfePhase,
         };
     }
 
+    
+    pub fn current_phase(&mut self){
+        loop{
+        match self.phase{
+            Phase::AmorPhase=>{
+                if !self.rolle_da(Rolle::Amor){
+                    self.naechste_phase();
+                    return;
+                }
+            }
+            Phase::WerwölfePhase=>{
+                if !self.rolle_da(Rolle::Werwolf){
+                    self.naechste_phase();
+                    return;
+                }
+            }
+            Phase::SeherPhase=>{
+                if !self.rolle_da(Rolle::Seher){
+                    self.naechste_phase();
+                    return;
+                }
+            }
+            Phase::HexePhase=>{
+                if !self.rolle_da(Rolle::Hexe){
+                    self.naechste_phase();
+                    return;
+                }
+            }
+            Phase::Tag=>{
+                self.naechste_phase();
+            }
+
+
+    }
+    break;
+    }}
+
+    pub fn rolle_da(&self, rolle: Rolle)->bool{
+        self.players.iter().any(|p|p.rolle==rolle&&p.lebend)
+    }
 
     pub fn tag_lynchen(&mut self, name: &str) {
         println!("(TAG) Dorf lyncht {}", name);
@@ -175,7 +214,7 @@ impl Game {
         }
         println!("(NACHT) Werwölfe greifen {} an", victim_name);
         self.spieler_stirbt(&victim_name);
-        self.naechste_phase();
+        
         println!("(NACHT) Werwolf tötet {}", victim_name);
     }
 
@@ -213,7 +252,6 @@ impl Game {
 
         seher.bereits_gesehen=true;
 
-        self.naechste_phase();
         Some(target_rolle)
     }
     
@@ -234,7 +272,6 @@ impl Game {
         }else {
             println!("Spieler nicht gefunden");
         }
-        self.naechste_phase();
     }
 
     pub fn hexe_toetet(&mut self, extra_target:&str){
@@ -249,12 +286,10 @@ impl Game {
         } else {
             println!("Spieler nicht gefunden.");
         }
-        self.naechste_phase();
     }
 
     pub fn hexe_tut_nichts(&mut self){
         println!("Hexe tut nichts.");
-        self.naechste_phase();
     }
 
      pub fn amor_waehlt (&mut self, target_1: &str, target_2: &str){
@@ -305,9 +340,7 @@ impl Game {
         
         
 
-        println!("Amor hat '{}' und '{}' zu Liebenden gemacht!", target_1, target_2);
-        
-        self.phase=Phase::WerwölfePhase;
+        println!("Amor hat '{}' und '{}' zu Liebenden gemacht!", target_1, target_2); 
     }
     
     fn spieler_stirbt(&mut self, verstorbener:&str){

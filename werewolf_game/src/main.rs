@@ -155,6 +155,10 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     *started = true;
     
     let mut users = state.game.lock().await;
+
+    users.phase=Phase::Tag;
+    users.runden=1;
+
     users.verteile_rollen();
     for p in users.players.iter() {
         let safe_username = encode(&p.name);
@@ -193,7 +197,7 @@ async fn werwolf_action(
     Form(form): Form<ActionForm>,
 ) -> Redirect {
     let mut game = state.game.lock().await;
-
+    println!("Phase VOR Aktion = {:?}", game.phase);
     game.werwolf_toetet(&form.target);
 
     /*if let Some(winner) = tag_nacht::check_win(&game){
@@ -201,7 +205,9 @@ async fn werwolf_action(
     } else {
         tag_nacht::advance_phase(&mut game);
     } */
-
+    game.naechste_phase();
+    game.current_phase();
+    println!("Phase NACH Aktion = {:?}", game.phase);
     Redirect::to(&format!("/{}", form.actor))
 }
 
@@ -210,7 +216,7 @@ async fn tag_action(
     Form(form): Form<ActionForm>,
 ) -> Redirect {
     let mut game = state.game.lock().await;
-
+    println!("Phase VOR Aktion = {:?}", game.phase);
     if let crate::logic::Phase::Tag = game.phase {
         game.tag_lynchen(&form.target);
 
@@ -220,8 +226,10 @@ async fn tag_action(
             tag_nacht::advance_phase(&mut game);
 
     } */
-}
-
+    }
+    game.naechste_phase();
+    game.current_phase();
+    println!("Phase NACH Aktion = {:?}", game.phase);
     Redirect::to("/")
 }
 
@@ -230,6 +238,7 @@ async fn seher_action(
     Form(form): Form<ActionForm>,
 ) -> Redirect{
     let mut game = state.game.lock().await;
+    println!("Phase vor Seher-Aktion = {:?}", game.phase);
     let rolle_opt = game.seher_schaut(&form.target);
     
     if let Some(p) =  rolle_opt {
@@ -237,7 +246,20 @@ async fn seher_action(
 
     println!("Seher '{}' sieht, dass '{}' die Rolle {:?} hat", form.actor, form.target, p);
 }
+    game.naechste_phase();
+    game.current_phase();
+    println!("Phase NACH Aktion = {:?}", game.phase);
+    Redirect::to(&format!("/{}", form.actor))
+}
 
+async fn hexe_heilt(
+    State(state):State<AppState>,
+    Form(form):Form<ActionForm>,
+)->Redirect{
+    let mut game=state.game.lock().await;
+    game.hexe_heilt();
+    game.naechste_phase();
+    game.current_phase();
     Redirect::to(&format!("/{}", form.actor))
 }
 
