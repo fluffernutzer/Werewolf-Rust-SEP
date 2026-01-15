@@ -154,6 +154,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
     };
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     let rolle_html = htmlescape::encode_minimal(&rolle_text);
     let rolle = game.rolle_von(&username);
 
@@ -189,6 +190,8 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
     _ => ("Dorfbewohner".to_string(), String::new()),
 };
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
     let user_page = template
@@ -314,6 +317,7 @@ async fn tag_action(
     game.current_phase();
     println!("Phase NACH Aktion = {:?}", game.phase);
     Redirect::to("/tag")
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
 }
 
@@ -327,11 +331,14 @@ async fn werwolf_action(
         game.werwolf_toetet(&form.target);
     
     Redirect::to(&format!("/{}", form.actor))
+=======
+>>>>>>> Stashed changes
 }
 
 async fn seher_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 ) -> Redirect{
     let game = state.game.lock().await;
@@ -339,6 +346,8 @@ async fn seher_action(
     println!("Seher '{}' sieht, dass '{}' die Rolle {:?} hat", form.actor, form.target, rolle);
     Redirect::to(&format!("/{}", form.actor))
 =======
+=======
+>>>>>>> Stashed changes
 ) -> Html<String>{
     let mut game = state.game.lock().await;
 
@@ -388,6 +397,9 @@ async fn seher_action(
         .replace("{{aktion}}", &action_html);
 
     Html(page)
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 }
 
