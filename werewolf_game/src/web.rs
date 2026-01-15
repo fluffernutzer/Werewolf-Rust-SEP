@@ -40,7 +40,7 @@ struct ActionForm {
 }
 #[tokio::main]
 
-async fn ws_main() {
+async fn main() {
     let (tx, _) = broadcast::channel(32);
     let state = AppState {
         game: Arc::new(Mutex::new(Game::new())),
