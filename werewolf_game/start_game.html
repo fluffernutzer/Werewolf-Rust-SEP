@@ -6,10 +6,19 @@
 </head>
 
 <body>
-    <h1>Game Starting...</h1>
-    <p>Opening player tabs...</p>
+    <h1>Game Starting</h1>
+    <p>Opening player tabs</p>
     <ul>
         {{users}}
     </ul>
+    <p>Aktuelle Phase: {{phase}}</p>
+
+<h2>Tagaktion</h2>
+<form action="/tag" method="post">
+    <input type="hidden" name="actor" value="{{username}}">
+    <input name="target" placeholder="Spieler">
+    <button>Lynchen</button>
+</form>
+
 </body>
 </html>

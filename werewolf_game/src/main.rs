@@ -1,5 +1,9 @@
 #![forbid(unsafe_code)]
+pub mod roles;
 mod logic;
+mod tag_nacht;
+// use crate::tag_nacht::{check_win, advance_phase};
+
 use axum::{
     Router,
     extract::{Form, Path, State},
@@ -23,6 +27,7 @@ use crate::logic::{Game,Phase};
 struct NameForm {
     username: String,
 }
+
 #[derive(Clone)]
 struct AppState {
     game: Arc<Mutex<Game>>,
@@ -45,8 +50,8 @@ async fn main() {
         .route("/add-user", post(add_user))
         .route("/start-game", post(start_game))
         .route("/:username", get(show_user))
-        .route("/tag", post(tag_action))
         .route("/nacht/werwolf", post(werwolf_action))
+        .route("/tag", post(tag_action))
         .route("/nacht/seher", post(seher_action))
         .with_state(state);
 
@@ -87,6 +92,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
     let template = tokio::fs::read_to_string("user.html")
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
+
     let safe_username = htmlescape::encode_minimal(&username);
     let game = state.game.lock().await;
     let rolle_text = match game.rolle_von(&username) {
@@ -100,6 +106,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
 
     Html(user_page)
 }
+
 async fn add_user(State(state): State<AppState>, Form(form): Form<NameForm>) -> Redirect {
     let mut started = state.game_started.lock().await;
     if *started {
@@ -117,6 +124,10 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     *started = true;
     
     let mut users = state.game.lock().await;
+
+    users.phase=Phase::Tag;
+    users.runden=1;
+
     users.verteile_rollen();
     for p in users.players.iter() {
         let safe_username = encode(&p.name);
@@ -202,25 +213,39 @@ async fn tag_action(
     Form(form): Form<ActionForm>,
 ) -> Redirect {
     let mut game = state.game.lock().await;
-    if let Phase::Tag = game.phase {
+    println!("Phase VOR Aktion = {:?}", game.phase);
+    if let crate::logic::Phase::Tag = game.phase {
         game.tag_lynchen(&form.target);
-        game.naechste_phase();
+
+        /* if let Some(winner) = tag_nacht::check_win(&game) {
+            println!("SPIEL ENDE: {}", winner);
+        } else {
+            tag_nacht::advance_phase(&mut game);
+
+    } */
     }
     game.naechste_phase();
     game.current_phase();
     println!("Phase NACH Aktion = {:?}", game.phase);
-    Redirect::to("/tag")
+    Redirect::to("/")
 }
 
-async fn werwolf_action(
+async fn seher_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
-) -> Redirect {
-    println!("actor = '{}', target = '{}'", form.actor, form.target);
+) -> Redirect{
     let mut game = state.game.lock().await;
+    println!("Phase vor Seher-Aktion = {:?}", game.phase);
+    let rolle_opt = game.seher_schaut(&form.target);
     
-        game.werwolf_toetet(&form.target);
-    
+    if let Some(p) =  rolle_opt {
+        game.last_seher_result = Some((form.target.clone(), p));
+
+    println!("Seher '{}' sieht, dass '{}' die Rolle {:?} hat", form.actor, form.target, p);
+}
+    game.naechste_phase();
+    game.current_phase();
+    println!("Phase NACH Aktion = {:?}", game.phase);
     Redirect::to(&format!("/{}", form.actor))
 }
 
@@ -278,3 +303,11 @@ async fn seher_action(
     Html(page)
 }
 
+/*async fn jaeger_action(
+    State(state):State<AppState>,
+    Form(form):Form<ActionForm>,
+)-> Redirect{
+    let mut game=state.game.lock().await;
+    game.jaeger_ziel=Some(form.target.clone());
+    Redirect::to(&format!("/{}",form.actor))
+}*/
