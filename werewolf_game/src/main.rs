@@ -219,7 +219,21 @@ async fn werwolf_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
 ) -> Html<String> {
+) -> Html<String> {
     let mut game = state.game.lock().await;
+
+    if game.phase != Phase::WerwölfePhase {
+        println!("Es ist gerade keine Werwolf Phase");
+        return Html(format!("<p>Es ist gerade keine Werwolf Phase</p>"));
+    }
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        if !player.lebend || player.bereits_gesehen {
+            println!("Werwolf darf diese Runde nicht mehr handeln.");
+            return Html(format!("<p>Werwolf darf diese Runde nicht mehr handeln.</p>"));
+        }
+    }
+
 
     if game.phase != Phase::WerwölfePhase {
         println!("Es ist gerade keine Werwolf Phase");
@@ -239,6 +253,10 @@ async fn werwolf_action(
         player.bereits_gesehen = true; 
     }
 
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        player.bereits_gesehen = true; 
+    }
+
     game.current_phase();
     //Redirect::to(&format!("/{}", form.actor))
     let template = tokio::fs::read_to_string("user.html")
@@ -253,7 +271,26 @@ async fn werwolf_action(
     );
 
     let rolle_text = "Werwolf";
+    //Redirect::to(&format!("/{}", form.actor))
+    let template = tokio::fs::read_to_string("user.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let safe_username = htmlescape::encode_minimal(&form.actor);
+
+    let action_html = format!(
+        "<p>Du hast <strong>{}</strong> getötet.</p>",
+        htmlescape::encode_minimal(&form.target)
+    );
+
+    let rolle_text = "Werwolf";
     println!("Phase NACH Aktion = {:?}", game.phase);
+    let page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", rolle_text)
+        .replace("{{aktion}}", &action_html);
+
+    Html(page)
     let page = template
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", rolle_text)
