@@ -94,41 +94,6 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
         None => "Unbekannt".to_string(),
     };
 
-    let rolle_html = htmlescape::encode_minimal(&rolle_text);
-    let rolle = game.rolle_von(&username);
-
-    let (rolle_text, action_html) = match rolle {
-    Some(logic::Rolle::Werwolf) => (
-        "Werwolf".to_string(),
-        format!(
-            r#"
-            <h2>Werwolf-Aktion</h2>
-            <form action="/nacht/werwolf" method="post">
-                <input type="hidden" name="actor" value="{username}">
-                <input name="target" placeholder="Opfer">
-                <button>Töten</button>
-            </form>
-            "#,
-            username = safe_username
-        ),
-    ),
-    Some(logic::Rolle::Seher) => (
-        "Seher".to_string(),
-        format!(
-            r#"
-            <h2>Seher-Aktion</h2>
-            <form action="/nacht/seher" method="post">
-                <input type="hidden" name="actor" value="{username}">
-                <input name="target" placeholder="Spieler">
-                <button>Schauen</button>
-            </form>
-            "#,
-            username = safe_username
-        ),
-    ),
-    _ => ("Dorfbewohner".to_string(), String::new()),
-};
-
     let user_page = template
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", &rolle_html).replace("{{aktion}}", &action_html);
@@ -184,6 +149,54 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
 
     Html(html) */
 }
+
+async fn werwolf_action(
+    State(state): State<AppState>,
+    Form(form): Form<ActionForm>,
+) -> Html<String> {
+    let mut game = state.game.lock().await;
+
+    if game.phase != Phase::WerwölfePhase {
+        println!("Es ist gerade keine Werwolf Phase");
+        return Html(format!("<p>Es ist gerade keine Werwolf Phase</p>"));
+    }
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        if !player.lebend || player.bereits_gesehen {
+            println!("Werwolf darf diese Runde nicht mehr handeln.");
+            return Html(format!("<p>Werwolf darf diese Runde nicht mehr handeln.</p>"));
+        }
+    }
+
+    game.werwolf_toetet(&form.target);
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        player.bereits_gesehen = true; 
+    }
+
+    game.current_phase();
+    //Redirect::to(&format!("/{}", form.actor))
+    let template = tokio::fs::read_to_string("user.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let safe_username = htmlescape::encode_minimal(&form.actor);
+
+    let action_html = format!(
+        "<p>Du hast <strong>{}</strong> getötet.</p>",
+        htmlescape::encode_minimal(&form.target)
+    );
+
+    let rolle_text = "Werwolf";
+    println!("Phase NACH Aktion = {:?}", game.phase);
+    let page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", rolle_text)
+        .replace("{{aktion}}", &action_html);
+
+    Html(page)
+}
+
 async fn tag_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
@@ -193,7 +206,10 @@ async fn tag_action(
         game.tag_lynchen(&form.target);
         game.naechste_phase();
     }
-    Redirect::to("/")
+    game.naechste_phase();
+    game.current_phase();
+    println!("Phase NACH Aktion = {:?}", game.phase);
+    Redirect::to("/tag")
 }
 
 async fn werwolf_action(
@@ -211,10 +227,54 @@ async fn werwolf_action(
 async fn seher_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
-) -> Redirect{
-    let game = state.game.lock().await;
-    let rolle = game.seher_schaut(&form.target);
-    println!("Seher '{}' sieht, dass '{}' die Rolle {:?} hat", form.actor, form.target, rolle);
-    Redirect::to(&format!("/{}", form.actor))
+) -> Html<String>{
+    let mut game = state.game.lock().await;
+
+    if game.phase != Phase::SeherPhase {
+        println!("Seher ist nicht dran.");
+        return Html(format!("<p>Seher ist nicht dran.</p>"));
+    }
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        if !player.lebend || player.bereits_gesehen {
+            println!("Seher darf diese Runde nicht mehr handeln.");
+            return Html(format!("<p>Seher ist diese Runde nicht mehr dran.</p>"));
+        }
+    }
+
+    if let Some(rolle) = game.seher_schaut(&form.target) {
+        game.last_seher_result = Some((form.target.clone(), rolle));
+    }
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        player.bereits_gesehen = true; 
+    }
+
+    game.current_phase(); 
+    //Redirect::to(&format!("/{}", form.actor))
+    let template = tokio::fs::read_to_string("user.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let safe_username = htmlescape::encode_minimal(&form.actor);
+
+    let action_html = if let Some(rolle) = game.seher_schaut(&form.target) {
+    game.last_seher_result = Some((form.target.clone(), rolle));
+    format!(
+        "<p>Du hast gesehen, dass <strong>{}</strong> die Rolle {:?} hat.</p>",
+        htmlescape::encode_minimal(&form.target),
+        rolle
+    )
+} else {
+    "<p>Die Aktion konnte nicht durchgeführt werden.</p>".to_string()
+};
+    let rolle_text = "Seher";
+
+    let page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", rolle_text)
+        .replace("{{aktion}}", &action_html);
+
+    Html(page)
 }
 
