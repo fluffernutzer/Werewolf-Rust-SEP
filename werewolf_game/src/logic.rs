@@ -38,6 +38,12 @@ pub struct Game {
     pub last_seher_result:Option<(String,Rolle)>,
 }
 
+#[derive(Debug, Clone)]
+pub enum Winner {
+    Dorf,
+    Werwolf,
+}
+
 impl Spieler {
     pub fn new(name: String, team: Team, rolle: Rolle, lebend:bool) -> Self {
         Spieler {
@@ -343,7 +349,29 @@ impl Game {
 
         println!("Amor hat '{}' und '{}' zu Liebenden gemacht!", target_1, target_2); 
     }
-    
+
+    pub fn check_win(&self) -> Option<Winner> {
+        let lebende_werwoelfe = self.players
+            .iter()
+            .filter(|p| p.lebend && p.team == Team::TeamWerwolf)
+            .count();
+
+        let lebende_dorfspieler = self.players
+            .iter()
+            .filter(|p| p.lebend && p.team != Team::TeamWerwolf)
+            .count();
+
+        if lebende_werwoelfe == 0 {
+            return Some(Winner::Dorf);
+        }
+
+        if lebende_werwoelfe >= lebende_dorfspieler {
+            return Some(Winner::Werwolf);
+        }
+
+        None
+    }
+
     fn spieler_stirbt(&mut self, verstorbener:&str){
         let player=self.players.iter_mut().find(|p| p.name == verstorbener);
         if player.is_none(){
@@ -393,6 +421,10 @@ impl Game {
         }
         }
         self.liebende_aktiv=false;
-    }
+        
+       if let Some(winner) = self.check_win() {
+        println!("SPIEL BEENDET: {:?} gewinnt!", winner);
+        } 
 
+    }
 }
