@@ -29,6 +29,7 @@ pub struct Game {
     pub runden: u32,
     pub heiltrank_genutzt:bool,
     pub bereits_getoetet: bool,
+    pub tag_opfer: Option<String>,
     pub nacht_opfer: Option<String>,
     pub liebender_1:Option<String>,
     pub liebender_2:Option<String>,
@@ -65,6 +66,7 @@ impl Game {
             runden: 1,
             heiltrank_genutzt: false,
             bereits_getoetet: false,
+            tag_opfer:None,
             nacht_opfer:None,
             liebender_1:None,
             liebender_2:None,
@@ -193,7 +195,7 @@ impl Game {
     }
 
     pub fn tag_lynchen(&mut self, name: &str) {
-        self.nacht_opfer=Some(name.to_string());
+        self.tag_opfer=Some(name.to_string());
         println!("(TAG) Dorf lyncht {}", name);
     }
 

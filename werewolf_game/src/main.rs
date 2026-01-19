@@ -18,7 +18,7 @@ use tokio::{
 use urlencoding::encode;
 use webbrowser;
 
-use crate::logic::{Game, Phase};
+use crate::logic::{Game, Phase, Winner};
 
 #[derive(Deserialize)]
 struct NameForm {
@@ -47,6 +47,7 @@ async fn main() {
         .route("/start-game", post(start_game))
         .route("/:username", get(show_user))
         .route("/tag", get(tag_show).post(tag_action))
+        //.route("/winner", get(winner_show))
         .route("/nacht/werwolf", post(werwolf_action))
         .route("/nacht/seher", post(seher_action))
         .with_state(state);
@@ -231,7 +232,6 @@ async fn werwolf_action(
     Form(form): Form<ActionForm>,
 ) -> Html<String> {
     let mut game = state.game.lock().await;
-
     if game.phase != Phase::WerwölfePhase {
         println!("Es ist gerade keine Werwolf Phase");
         return Html(format!("<p>Es ist gerade keine Werwolf Phase</p>"));
@@ -276,17 +276,14 @@ async fn werwolf_action(
 }
 
 async fn tag_show(State(state): State<AppState>) -> Html<String> {
-    //let form = NameForm{ username: String:: from("")};
+  
     let mut game = state.game.lock().await;
+    if let Some(winner) =game.check_win(){
+            return winner_show(winner).await;
+    }
     let template = tokio::fs::read_to_string("tag-action.html")
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
-    /* let users_list: String = users
-       .iter()
-       .map(|u| format!("<li>{}</li>", htmlescape::encode_minimal(u)))
-       .collect::<Vec<_>>()
-       .join("\n");
-    */
 
     let users_html: String = game
         .players
@@ -295,8 +292,6 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
         .collect::<Vec<_>>()
         .join("\n");
     let phase = format!("{:?}", game.phase);
-
-    //let s_username = htmlescape::encode_minimal(&safe_username);
 
     let action_html = if game.phase == crate::logic::Phase::Tag {
         format!(
@@ -311,7 +306,7 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
     } else {
         format!(
             "<p>Ihr habt <strong>{}</strong> getötet.</p>",
-            htmlescape::encode_minimal(game.nacht_opfer.as_deref().unwrap())
+            htmlescape::encode_minimal(game.tag_opfer.as_deref().unwrap_or("Unbekannt"))
         )
     };
 
@@ -383,5 +378,14 @@ async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm
         .replace("{{rolle}}", rolle_text)
         .replace("{{aktion}}", &action_html);
 
+    Html(page)
+}
+async fn winner_show(winner: Winner) -> Html<String> {
+    let template = tokio::fs::read_to_string("winner.html")
+        .await
+        .unwrap_or("<h1>Could not read file</h1>".to_string());
+
+      let winner_text = format!("{:?}", winner);
+    let page = template.replace("{{winner}}", &winner_text);
     Html(page)
 }
