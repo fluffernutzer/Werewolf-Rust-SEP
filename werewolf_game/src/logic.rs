@@ -38,7 +38,7 @@ pub struct Game {
     pub last_seher_result:Option<(String,Rolle)>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Winner {
     Dorf,
     Werwolf,

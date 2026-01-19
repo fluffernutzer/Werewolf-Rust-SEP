@@ -384,4 +384,5 @@ async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm
         .replace("{{aktion}}", &action_html);
 
     Html(page)
+
 }
