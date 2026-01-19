@@ -12,13 +12,10 @@
         {{users}}
     </ul>
     <p>Aktuelle Phase: {{phase}}</p>
-
-<h2>Tagaktion</h2>
-<form action="/tag" method="post">
-    <input type="hidden" name="actor" value="{{username}}">
-    <input name="target" placeholder="Spieler">
-    <button>Lynchen</button>
-</form>
+    <p>Please press this when you are ready to play:</p>
+    <form id="startForm" action="/tag" method="GET">
+    <button type="submit">Start Game</button>
+  </form>
 
 </body>
 </html>

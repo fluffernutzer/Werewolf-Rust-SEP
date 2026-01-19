@@ -187,6 +187,7 @@ impl Game {
     }
 
     pub fn tag_lynchen(&mut self, name: &str) {
+        self.nacht_opfer=Some(name.to_string());
         println!("(TAG) Dorf lyncht {}", name);
     }
 
