@@ -14,6 +14,13 @@ pub enum Phase {
 }
 
 #[derive(Debug, Clone)]
+pub enum HexenAktion{
+    Heilen,
+    NichtsTun,
+    Toeten,
+}
+
+#[derive(Debug, Clone)]
 pub struct Spieler {
     pub name: String,
     pub team: Team,
@@ -36,6 +43,11 @@ pub struct Game {
     pub amor_hat_gewaehlt:bool,
     pub jaeger_ziel:Option<String>,
     pub last_seher_result:Option<(String,Rolle)>,
+    amor_done:bool,
+    werwoelfe_done:bool,
+    seher_done:bool,
+    hexe_done:bool,
+    abstimmung_done:bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,6 +84,12 @@ impl Game {
             amor_hat_gewaehlt:false,
             jaeger_ziel:None,
             last_seher_result:None,
+            amor_done:false,
+            werwoelfe_done:false,
+            seher_done:false,
+            hexe_done:false,
+            abstimmung_done:false,
+
         }
     }
 
@@ -145,48 +163,60 @@ impl Game {
             Phase::HexePhase=>{
             //Phase::Nacht => {
                 self.runden += 1;
+                self.abstimmung_done=false;
+                self.werwoelfe_done=false;
+                self.seher_done=false;
+                self.hexe_done=false;
+                self.amor_done=false;
                 Phase::Tag
             }
             //Phase::Nacht=>Phase::WerwölfePhase,
         };
     }
 
-    
-    pub fn current_phase(&mut self){
-        loop{
+    pub fn phase_has_role(&self)->bool{
         match self.phase{
-            Phase::AmorPhase=>{
-                if !self.rolle_da(Rolle::Amor){
-                    self.naechste_phase();
-                    return;
-                }
-            }
-            Phase::WerwölfePhase=>{
-                if !self.rolle_da(Rolle::Werwolf){
-                    self.naechste_phase();
-                    return;
-                }
-            }
-            Phase::SeherPhase=>{
-                if !self.rolle_da(Rolle::Seher){
-                    self.naechste_phase();
-                    return;
-                }
-            }
-            Phase::HexePhase=>{
-                if !self.rolle_da(Rolle::Hexe){
-                    self.naechste_phase();
-                    return;
-                }
-            }
-            Phase::Tag=>{
-                self.naechste_phase();
-            }
-
-
+            Phase::AmorPhase=>self.rolle_da(Rolle::Amor),
+            Phase::WerwölfePhase=>self.rolle_da(Rolle::Werwolf),
+            Phase::SeherPhase=>self.rolle_da(Rolle::Seher),
+            Phase::HexePhase=>self.rolle_da(Rolle::Hexe),
+            Phase::Tag=>true,     
+           }
     }
-    break;
-    }}
+
+    pub fn phase_done(&self)->bool{
+        match self.phase{
+            Phase::Tag=>{
+                if self.runden==1{
+                    true
+                }else{
+                    self.abstimmung_done
+                }
+            }
+            Phase::AmorPhase=>self.amor_done,
+            Phase::WerwölfePhase=>self.werwoelfe_done,
+            Phase::SeherPhase=>self.seher_done,
+            Phase::HexePhase=>self.hexe_done,
+            
+        }
+    }
+    
+  pub fn current_phase(&mut self){
+    println!( "DEBUG: phase={:?}, runde={}, amor_done={}, ww_done={}, seher_done={}, hexe_done={}, abst_done={}", self.phase, self.runden, self.amor_done, self.werwoelfe_done, self.seher_done, self.hexe_done, self.abstimmung_done );
+        loop{
+            if !self.phase_has_role(){
+                self.naechste_phase();
+                continue;
+                }
+            if self.phase_done(){
+                self.naechste_phase();
+                continue;
+            }
+            
+            break;
+            }
+    }
+
 
     pub fn rolle_da(&self, rolle: Rolle)->bool{
         self.players.iter().any(|p|p.rolle==rolle&&p.lebend)
@@ -195,108 +225,135 @@ impl Game {
     pub fn tag_lynchen(&mut self, name: &str) {
         self.nacht_opfer=Some(name.to_string());
         println!("(TAG) Dorf lyncht {}", name);
+        self.abstimmung_done=true;
     }
 
-    pub fn werwolf_toetet(&mut self, victim_name: &str) {
+    pub fn werwolf_toetet(&mut self, actor_name:&str, victim_name: &str) ->Result<(),String>{
          if self.phase!=Phase::WerwölfePhase{
-            println!("es ist gerade keine werwolf phase");
-            return;
+            return Err("Die Werwölfe sind gerade nicht dran.".into());
         }
         let lebende_werwoelfe= self.players.iter().any(|p| p.rolle==Rolle::Werwolf&&p.lebend);
         if !lebende_werwoelfe{
-            println!("es gibt keine werwölfe zum wählen.");
-            return;
+            return Err("Es gibt keine lebenden Werwölfe mehr".into());
         }
-        let target_opt=self.players.iter().find(|p| p.name==victim_name);
-        let target= match target_opt{
-            Some (p)=>p,
-            None=>{
-                println!("spieler {} existiert nciht.",victim_name);
-                return;
-            }
-        };
+        let werwolf=self
+                .players
+                .iter()
+                .find(|p|p.name==actor_name&&p.rolle==Rolle::Werwolf)
+                .ok_or("Du bist kein Werwolf.")?;
+
+        if !werwolf.lebend{
+            return Err("Nur lebende Werwölfe dürfen wählen.".into());
+        }
+
+
+        let target=self.players
+                    .iter()
+                    .find(|p| p.name==victim_name)
+                    .ok_or("Zielperson existiert nicht.")?;
+
         if !target.lebend{
-            println!("das opfer {} ist schon tot.", victim_name);
-            return;
+            return Err("Der Spieler ist bereits tot.".into());
         }
+         if actor_name==victim_name{
+            return Err("Man kann sich nicht selbst wählen.".into());
+         }
+
         println!("(NACHT) Werwölfe greifen {} an", victim_name);
         self.spieler_stirbt(&victim_name);
         
         println!("(NACHT) Werwolf tötet {}", victim_name);
+        self.werwoelfe_done=true;
+        Ok(())
     }
 
-    pub fn seher_schaut(&mut self, target_name: &str) -> Option<Rolle> {
+
+
+pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
         if self.phase!=Phase::SeherPhase{
-            println!("Der Seher ist nicht dran.");
-            return None;
+           return Err("Seher ist nicht dran.".into());
         }
         let seher_index=self.players
         .iter()
-        .position(|p| p.rolle==Rolle::Seher)?;
+        .position(|p| p.rolle==Rolle::Seher).ok_or("Kein Seher im Spiel")?;
 
         let target_index=self.players
         .iter()
-        .position(|p|p.name==target_name)?;
+        .position(|p|p.name==target_name).ok_or("Ziel existiert nicht.")?;
 
         let target_rolle=self.players[target_index].rolle;
         let target_lebend=self.players[target_index].lebend;
         if !target_lebend{
-            println!("Die Person, die der Seher sehen will muss leben");
-            return None;
+            return Err("Opfer lebt nicht mehr".into());
         }
         let seher =&mut self.players[seher_index];
 
         if !seher.lebend{
-            println!("Seher ist nicht mehr am Leben");
-            return None;
+            return Err("Der Seher lebt nicht mehr und kann deswegen nicht mehr sehen.".into());
         }
         if seher.bereits_gesehen{
-            println!("der seher hat sich bereits eine Karte in dieser Runde angesehen");
-            return None;
+            return Err("Der Seher hat bereits einmal diese Runde gesehen.".into());
         }
         
         println!("(NACHT) Seher überprüft {}", target_name);
 
         seher.bereits_gesehen=true;
 
-        Some(target_rolle)
+        self.naechste_phase();
+        self.current_phase();
+
+        self.seher_done=true;
+        Ok(target_rolle)
     }
+
+
     
     //Hexe darf nur einmal heilen und nur einmal töten
-    pub fn hexe_heilt(&mut self){
-        if self.heiltrank_genutzt{
-            println!("Hexe hat ihren Heiltrank bereits einmal benutzt.");
-            return;
-        }
-        let Some (opfer_name)=&self.nacht_opfer else {
-            println!("es gibt kein Opfer in der Nacht zum heilen");
-            return;
-        };
-        if let Some(player) = self.players.iter_mut().find(|p| p.name == *opfer_name){
-            player.lebend=true;
-            self.heiltrank_genutzt=true;
-            println!("(Nacht) Hexe heilt {}", opfer_name);
-        }else {
-            println!("Spieler nicht gefunden");
-        }
-    }
 
-    pub fn hexe_toetet(&mut self, extra_target:&str){
-        if self.bereits_getoetet{
-            println!("Die Hexe hat bereits einmal jemanden getötet.");
-            return;
-        }
-        if let Some(player)= self.players.iter_mut().find(|p| p.name==extra_target){
-            player.lebend=false;
-            self.bereits_getoetet=true;
-            println!("Hexe tötet noch dazu: {}", extra_target);
-        } else {
-            println!("Spieler nicht gefunden.");
-        }
-    }
+    pub fn hexe_arbeitet(&mut self, aktion:HexenAktion, extra_target:&str)->Result<(),String>{
+        match aktion {
+            HexenAktion::Heilen=> {
+                if self.heiltrank_genutzt{
+                    return Err("Hexe hat ihren Heiltrank bereits einmal benutzt.".into());
+                }
+                
+                let opfer_name=self.nacht_opfer.as_ref().ok_or("Es gibt kein Opfer.")?;
 
-    pub fn hexe_tut_nichts(&mut self){
-        println!("Hexe tut nichts.");
+                let geheilter=self.players
+                        .iter_mut()
+                        .find(|p| p.name==*opfer_name)
+                        .ok_or("Spieler nicht gefunden.")?;
+
+                geheilter.lebend=true;
+                self.heiltrank_genutzt=true;
+                println!("(Nacht) Hexe heilt {}", opfer_name);
+                
+                Ok(())
+            }
+
+            HexenAktion::Toeten=>{
+                 if self.bereits_getoetet{
+                    return Err("Die Hexe hat bereits einmal jemanden getötet.".into());
+                }
+                
+                let opfer=self.players
+                        .iter_mut()
+                        .find(|p|p.name==extra_target)
+                        .ok_or("Opfer konnte nicht gefunden werden")?;
+
+                opfer.lebend=false;
+                self.bereits_getoetet=true;
+                println!("Hexe tötet noch dazu: {}", extra_target);
+
+                Ok(())
+            }
+
+            HexenAktion::NichtsTun=>{
+                println!("Hexe tut nichts.");
+                Ok(())
+            }
+
+        }
     }
 
      pub fn amor_waehlt (&mut self, target_1: &str, target_2: &str){
