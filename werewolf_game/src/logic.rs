@@ -18,6 +18,13 @@ pub enum HexenAktion{
     Toeten,
 }
 #[derive(Debug, Clone)]
+pub enum HexenAktion{
+    Heilen,
+    NichtsTun,
+    Toeten,
+}
+
+#[derive(Debug, Clone)]
 pub struct Spieler {
     pub name: String,
     pub team: Team,
@@ -35,15 +42,20 @@ pub struct Game {
     pub bereits_getoetet: bool,
     pub tag_opfer: Option<String>,
     pub nacht_opfer: Option<String>,
-    pub liebender_1: Option<String>,
-    pub liebender_2: Option<String>,
-    pub liebende_aktiv: bool,
-    pub amor_hat_gewaehlt: bool,
-    pub jaeger_ziel: Option<String>,
-    pub last_seher_result: Option<(String, Rolle)>,
+    pub liebender_1:Option<String>,
+    pub liebender_2:Option<String>,
+    pub liebende_aktiv:bool,
+    pub amor_hat_gewaehlt:bool,
+    pub jaeger_ziel:Option<String>,
+    pub last_seher_result:Option<(String,Rolle)>,
+    pub amor_done:bool,
+    pub werwoelfe_done:bool,
+    pub seher_done:bool,
+    pub hexe_done:bool,
+    pub abstimmung_done:bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Winner {
     Dorf,
     Werwolf,
@@ -69,14 +81,19 @@ impl Game {
             runden: 1,
             heiltrank_genutzt: false,
             bereits_getoetet: false,
-            tag_opfer: None,
-            nacht_opfer: None,
-            liebender_1: None,
-            liebender_2: None,
-            liebende_aktiv: false,
-            amor_hat_gewaehlt: false,
-            jaeger_ziel: None,
-            last_seher_result: None,
+            nacht_opfer:None,
+            liebender_1:None,
+            liebender_2:None,
+            liebende_aktiv:false,
+            amor_hat_gewaehlt:false,
+            jaeger_ziel:None,
+            last_seher_result:None,
+            amor_done:false,
+            werwoelfe_done:false,
+            seher_done:false,
+            hexe_done:false,
+            abstimmung_done:false,
+
         }
     }
 
@@ -136,65 +153,9 @@ impl Game {
             .map(|p| &p.rolle)
     }
 
-    pub fn naechste_phase(&mut self) {
-        self.phase = match self.phase {
-            Phase::Tag => {
-                if self.runden == 1 {
-                    Phase::AmorPhase
-                } else {
-                    Phase::WerwölfePhase
-                }
-            }
-            Phase::AmorPhase => Phase::WerwölfePhase,
-            Phase::WerwölfePhase => Phase::SeherPhase,
-            Phase::SeherPhase => Phase::HexePhase,
-            Phase::HexePhase => {
-                //Phase::Nacht => {
-                self.runden += 1;
-                Phase::Tag
-            } //Phase::Nacht=>Phase::WerwölfePhase,
-        };
-    }
+   
 
-    pub fn current_phase(&mut self) {
-        loop {
-            match self.phase {
-                Phase::AmorPhase => {
-                    if !self.rolle_da(Rolle::Amor) {
-                        self.naechste_phase();
-                        return;
-                    }
-                }
-                Phase::WerwölfePhase => {
-                    if !self.rolle_da(Rolle::Werwolf) {
-                        self.naechste_phase();
-                        return;
-                    }
-                }
-                Phase::SeherPhase => {
-                    if !self.rolle_da(Rolle::Seher) {
-                        self.naechste_phase();
-                        return;
-                    }
-                }
-                Phase::HexePhase => {
-                    if !self.rolle_da(Rolle::Hexe) {
-                        self.naechste_phase();
-                        return;
-                    }
-                }
-                Phase::Tag => {
-                    self.naechste_phase();
-                }
-            }
-            break;
-        }
-    }
-
-    pub fn rolle_da(&self, rolle: Rolle) -> bool {
-        self.players.iter().any(|p| p.rolle == rolle && p.lebend)
-    }
-
+  
     pub fn tag_lynchen(&mut self, name: &str) {
         self.tag_opfer = Some(name.to_string());
         println!("(TAG) Dorf lyncht {}", name);

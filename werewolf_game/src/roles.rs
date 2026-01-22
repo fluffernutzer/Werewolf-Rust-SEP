@@ -11,7 +11,7 @@ pub enum Rolle {
     Amor,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Team{
     TeamWerwolf,
     TeamDorf,

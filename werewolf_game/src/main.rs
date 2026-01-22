@@ -196,7 +196,7 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     *started = true;
     let mut game_logic = state.game.lock().await;
     game_logic.verteile_rollen();
-
+  
     //game_logic.current_phase();
     for p in game_logic.players.iter() {
         let safe_username = encode(&p.name);
@@ -229,7 +229,7 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     Html(html) */
 }
 
-async fn werwolf_action(
+/*async fn werwolf_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
 ) -> Html<String> {
@@ -260,7 +260,42 @@ async fn werwolf_action(
         .replace("{{rolle}}", rolle_text)
         .replace("{{aktion}}", &action_html);
     Html(page)
+}*/
+
+async fn werwolf_action(
+    State(state): State<AppState>,
+    Form(form): Form<ActionForm>,
+) -> Html<String> {
+    let mut game = state.game.lock().await;
+    //Redirect::to(&format!("/{}", form.actor))
+    let template = tokio::fs::read_to_string("user.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let safe_username = htmlescape::encode_minimal(&form.actor);
+    let action_html = match game.werwolf_toetet(&form.actor,&form.target){
+        Ok(())=>format!(
+        "<p>Du hast <strong>{}</strong> getötet.</p>",
+        htmlescape::encode_minimal(&form.target)
+    ),
+        Err(msg)=>format!(
+            "<p>Fehler: {}</p>",
+            htmlescape::encode_minimal(&msg)
+        ),
+
+    };
+   println!("Phase NACH Aktion: {:?}", game.phase);
+
+    let rolle_text = "Werwolf";
+    //println!("Phase NACH Aktion = {:?}", game.phase);
+    let page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", rolle_text)
+        .replace("{{aktion}}", &action_html);
+    Html(page)
 }
+
+
 
 async fn tag_show(State(state): State<AppState>) -> Html<String> {
     let mut game = state.game.lock().await;
@@ -314,7 +349,7 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
     else {
         format!(
             "<p>Ihr habt <strong>{}</strong> getötet.</p>",
-            htmlescape::encode_minimal(game.tag_opfer.as_deref().unwrap_or("Niemand"))
+            htmlescape::encode_minimal(game.nacht_opfer.as_deref().unwrap_or("Niemand"))
         )
     };
    
@@ -336,7 +371,7 @@ async fn tag_action(State(state): State<AppState>, Form(form): Form<NameForm>) -
       Redirect::to("/tag")
 }
 
-async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm>) -> Html<String> {
+/*async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm>) -> Html<String> {
     let mut game = state.game.lock().await;
     //let vorher = game.phase.clone();
 
@@ -356,6 +391,63 @@ async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm
         Err(msg) => format!("<p>Fehler: {}</p>", htmlescape::encode_minimal(&msg)),
     };
     
+    let page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", rolle_text)
+        .replace("{{aktion}}", &action_html);
+
+    Html(page)
+
+}*/
+
+async fn seher_action(
+    State(state): State<AppState>,
+    Form(form): Form<ActionForm>,
+)-> Html<String>{
+    let mut game = state.game.lock().await;
+
+   /* if game.phase != Phase::SeherPhase {
+        println!("Seher ist nicht dran.");
+        return Html(format!("<p>Seher ist nicht dran.</p>"));
+    }
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        if !player.lebend || player.bereits_gesehen {
+            println!("Seher darf diese Runde nicht mehr handeln.");
+            return Html(format!("<p>Seher ist diese Runde nicht mehr dran.</p>"));
+        }
+    }
+
+    if let Some(rolle) = game.seher_schaut(&form.target) {
+        game.last_seher_result = Some((form.target.clone(), rolle));
+    }
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        player.bereits_gesehen = true; 
+    }
+
+    game.current_phase(); */
+    //Redirect::to(&format!("/{}", form.actor))
+
+   let template = tokio::fs::read_to_string("user.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let safe_username = htmlescape::encode_minimal(&form.actor);
+    let rolle_text = "Seher";
+
+    let action_html = match game.seher_schaut(&form.target){
+        Ok(rolle)=>format!(
+                "<p>Du hast gesehen, dass <strong>{}</strong> die Rolle {:?} hat.</p>",
+                htmlescape::encode_minimal(&form.target),
+                rolle
+        ),
+        
+        Err(msg)=>format!(
+                "<p>Fehler: {}</p>",
+                htmlescape::encode_minimal(&msg)
+            ),
+        };
     let page = template
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", rolle_text)
