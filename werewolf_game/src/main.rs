@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 mod logic;
 mod roles;
+mod tag_nacht;
 use axum::{
     Router,
     extract::{Form, Path, State},
@@ -195,6 +196,8 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     *started = true;
     let mut game_logic = state.game.lock().await;
     game_logic.verteile_rollen();
+  
+    //game_logic.current_phase();
     for p in game_logic.players.iter() {
         let safe_username = encode(&p.name);
         let url = format!("http://127.0.0.1:7878/{}", safe_username);
@@ -226,7 +229,7 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     Html(html) */
 }
 
-async fn werwolf_action(
+/*async fn werwolf_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
 ) -> Html<String> {
@@ -273,7 +276,42 @@ async fn werwolf_action(
         .replace("{{aktion}}", &action_html);
 
     Html(page)
+}*/
+
+async fn werwolf_action(
+    State(state): State<AppState>,
+    Form(form): Form<ActionForm>,
+) -> Html<String> {
+    let mut game = state.game.lock().await;
+    //Redirect::to(&format!("/{}", form.actor))
+    let template = tokio::fs::read_to_string("user.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let safe_username = htmlescape::encode_minimal(&form.actor);
+    let action_html = match game.werwolf_toetet(&form.actor,&form.target){
+        Ok(())=>format!(
+        "<p>Du hast <strong>{}</strong> getötet.</p>",
+        htmlescape::encode_minimal(&form.target)
+    ),
+        Err(msg)=>format!(
+            "<p>Fehler: {}</p>",
+            htmlescape::encode_minimal(&msg)
+        ),
+
+    };
+   println!("Phase NACH Aktion: {:?}", game.phase);
+
+    let rolle_text = "Werwolf";
+    //println!("Phase NACH Aktion = {:?}", game.phase);
+    let page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", rolle_text)
+        .replace("{{aktion}}", &action_html);
+    Html(page)
 }
+
+
 
 async fn tag_show(State(state): State<AppState>) -> Html<String> {
     //let form = NameForm{ username: String:: from("")};
@@ -311,7 +349,7 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
     } else {
         format!(
             "<p>Ihr habt <strong>{}</strong> getötet.</p>",
-            htmlescape::encode_minimal(game.nacht_opfer.as_deref().unwrap())
+            htmlescape::encode_minimal(game.nacht_opfer.as_deref().unwrap_or("Niemand"))
         )
     };
 
@@ -324,18 +362,17 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
 }
 async fn tag_action(State(state): State<AppState>, Form(form): Form<NameForm>) -> Redirect {
     let mut game = state.game.lock().await;
-
     if game.phase == Phase::Tag {
         game.tag_lynchen(&form.username);
-        game.naechste_phase();
-        game.current_phase();
+   
         println!("Phase NACH Tag = {:?}", game.phase);
     }
+
 
     Redirect::to("/tag")
 }
 
-async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm>) -> Html<String> {
+/*async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm>) -> Html<String> {
     let mut game = state.game.lock().await;
 
     if game.phase != Phase::SeherPhase {
@@ -385,4 +422,109 @@ async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm
 
     Html(page)
 
+}*/
+
+async fn seher_action(
+    State(state): State<AppState>,
+    Form(form): Form<ActionForm>,
+)-> Html<String>{
+    let mut game = state.game.lock().await;
+
+   /* if game.phase != Phase::SeherPhase {
+        println!("Seher ist nicht dran.");
+        return Html(format!("<p>Seher ist nicht dran.</p>"));
+    }
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        if !player.lebend || player.bereits_gesehen {
+            println!("Seher darf diese Runde nicht mehr handeln.");
+            return Html(format!("<p>Seher ist diese Runde nicht mehr dran.</p>"));
+        }
+    }
+
+    if let Some(rolle) = game.seher_schaut(&form.target) {
+        game.last_seher_result = Some((form.target.clone(), rolle));
+    }
+
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
+        player.bereits_gesehen = true; 
+    }
+
+    game.current_phase(); */
+    //Redirect::to(&format!("/{}", form.actor))
+
+   let template = tokio::fs::read_to_string("user.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let safe_username = htmlescape::encode_minimal(&form.actor);
+    let rolle_text = "Seher";
+
+    let action_html = match game.seher_schaut(&form.target){
+        Ok(rolle)=>format!(
+                "<p>Du hast gesehen, dass <strong>{}</strong> die Rolle {:?} hat.</p>",
+                htmlescape::encode_minimal(&form.target),
+                rolle
+        ),
+        
+        Err(msg)=>format!(
+                "<p>Fehler: {}</p>",
+                htmlescape::encode_minimal(&msg)
+            ),
+        };
+    let page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", rolle_text)
+        .replace("{{aktion}}", &action_html);
+
+    Html(page)
 }
+
+
+//folgendes noch in Bearbeitung noch nicht notwendig für Prototyp:
+/*async fn hexe_action(
+    State(state):State<AppState>,
+    Form(form):Form<ActionForm>,
+) ->Redirect{
+    let mut game=state.game.lock().await;
+    
+    let template = tokio::fs::read_to_string("user.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let safe_username=htmlescape::encode_minimal(&form.actor);
+    let rolle_text="Hexe";
+
+    let aktion_enum=match form.aktion.as_str(){
+        "heilen"=>HexenAktion::Heilen,
+        "toeten"=>HexenAktion::Toeten,
+        "nichts"=>HexenAktion::NichtsTun,
+    };
+
+    let result=game.hexe_arbeitet(aktion_enum, &form.target);
+
+    let action_html= match (aktion_enum, result){
+        (HexenAktion::Heilen,Ok(_))=>format!(
+            "<p>Hexe hat <strong>{}</strong> geheilt.</p>",
+            htmlescape::encode_minimal(&form.target)
+        ),
+
+        (HexenAktion::Toeten,Ok(_))=>format!(
+            "<p>Hexe vergiftet noch <strong>{}</strong> dazu.</p>",
+            htmlescape::encode_minimal(&form.target)
+        ),
+        (HexenAktion::NichtsTun,Ok(_))=>{
+            "<p>Hexe tut nichts.</p>".to_string()
+        }
+        
+    };
+
+    let page = template
+        .replace("{{username}}", &safe_username)
+        .replace("{{rolle}}", rolle_text)
+        .replace("{{aktion}}", &action_html);
+
+    Html(page)
+
+    }
+*/

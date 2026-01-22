@@ -2,6 +2,79 @@ use crate::logic::{Game, Phase};
 use crate::roles::Rolle;
 use std::io;
 
+
+
+impl Game{
+
+
+  pub fn has_role(&self, rolle: Rolle)->bool{
+        self.players.iter().any(|p|p.rolle==rolle&&p.lebend)
+    }
+
+    pub fn phase_change(&mut self){
+        if let Phase::Tag=self.phase{
+            if self.has_role(Rolle::Amor){
+                self.phase=Phase::AmorPhase;
+                return;
+            } else if self.has_role(Rolle::Werwolf){
+                self.phase=Phase::WerwölfePhase;
+                return;
+            } else if self.has_role(Rolle::Seher){
+                self.phase=Phase::SeherPhase;
+                return;
+            } else if self.has_role(Rolle::Hexe){
+                self.phase=Phase::HexePhase;
+                return;
+            } else {
+                self.phase=Phase::Tag;
+                return;
+            }
+        }
+        if let Phase::AmorPhase=self.phase{
+            if self.has_role(Rolle::Werwolf){
+                self.phase=Phase::WerwölfePhase;
+                return;
+            } else if self.has_role(Rolle::Seher){
+                self.phase=Phase::SeherPhase;
+                return;
+            } else if self.has_role(Rolle::Hexe){
+                self.phase=Phase::HexePhase;
+                return;
+            } else {
+                self.phase=Phase::Tag;
+                return;
+            }
+        }
+        if let Phase::WerwölfePhase=self.phase{
+             if self.has_role(Rolle::Seher){
+                self.phase=Phase::SeherPhase;
+                return;
+            } else if self.has_role(Rolle::Hexe){
+                self.phase=Phase::HexePhase;
+                return;
+            } else {
+                self.phase=Phase::Tag;
+                return;
+            }
+        }
+        if let Phase::SeherPhase=self.phase{
+            if self.has_role(Rolle::Hexe){
+                self.phase=Phase::HexePhase;
+                return;
+            } else {
+                self.phase=Phase::Tag;
+                return;
+            }
+        }
+        if let Phase::HexePhase=self.phase{
+            self.phase=Phase::Tag;
+            self.runden += 1;
+            return;
+        }
+        }
+    }
+
+ 
 /* pub fn check_win(game: &Game) -> Option<String> {
     let mut dorf = 0;
     let mut wolfs = 0;
@@ -26,12 +99,4 @@ use std::io;
     None
 } */
 
-/* pub fn advance_phase(game: &mut Game) {
-    game.phase = match game.phase {
-        Phase::Tag => Phase::Nacht,
-        Phase::Nacht => {
-            game.runden += 1;
-            Phase::Tag
-        }
-    };
-} */
+
