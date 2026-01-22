@@ -196,7 +196,7 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     *started = true;
     let mut game_logic = state.game.lock().await;
     game_logic.verteile_rollen();
-  
+
     //game_logic.current_phase();
     for p in game_logic.players.iter() {
         let safe_username = encode(&p.name);
@@ -278,6 +278,7 @@ async fn werwolf_action(
         "<p>Du hast <strong>{}</strong> getötet.</p>",
         htmlescape::encode_minimal(&form.target)
     ),
+
         Err(msg)=>format!(
             "<p>Fehler: {}</p>",
             htmlescape::encode_minimal(&msg)
@@ -287,7 +288,7 @@ async fn werwolf_action(
    println!("Phase NACH Aktion: {:?}", game.phase);
 
     let rolle_text = "Werwolf";
-    //println!("Phase NACH Aktion = {:?}", game.phase);
+    //println!("Phase NACH Aktion = {:?}", game.phase); 
     let page = template
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", rolle_text)
@@ -295,7 +296,7 @@ async fn werwolf_action(
     Html(page)
 }
 
-
+ 
 
 async fn tag_show(State(state): State<AppState>) -> Html<String> {
     let mut game = state.game.lock().await;
@@ -324,18 +325,8 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
     let phase = format!("{:?}", game.phase);
 
     //let s_username = htmlescape::encode_minimal(&safe_username);
-
-    let action_html = if let Some(winner)= winner_da{
-        let winner_text = match winner {
-            crate::logic::Winner::Dorf => "Dorf",
-            crate::logic::Winner::Werwolf => "Werwolf",
-        };
-        format!(
-            "<p>Glückwunsch Team <strong>{}</strong>! Ihr habt gewonnen.</p>",
-            winner_text
-        )
-    }    
-    else if game.phase == crate::logic::Phase::Tag {
+ 
+    let action_html = if game.phase == crate::logic::Phase::Tag {
         format!(
             r#"
             <h2>Tagaktion</h2>
@@ -349,7 +340,7 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
     else {
         format!(
             "<p>Ihr habt <strong>{}</strong> getötet.</p>",
-            htmlescape::encode_minimal(game.nacht_opfer.as_deref().unwrap_or("Niemand"))
+            htmlescape::encode_minimal(game.tag_opfer.as_deref().unwrap_or("Niemand"))
         )
     };
    
@@ -397,71 +388,31 @@ async fn tag_action(State(state): State<AppState>, Form(form): Form<NameForm>) -
         .replace("{{aktion}}", &action_html);
 
     Html(page)
-
-}*/
-
-async fn seher_action(
-    State(state): State<AppState>,
-    Form(form): Form<ActionForm>,
-)-> Html<String>{
-    let mut game = state.game.lock().await;
-
-   /* if game.phase != Phase::SeherPhase {
-        println!("Seher ist nicht dran.");
-        return Html(format!("<p>Seher ist nicht dran.</p>"));
-    }
-
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
-        if !player.lebend || player.bereits_gesehen {
-            println!("Seher darf diese Runde nicht mehr handeln.");
-            return Html(format!("<p>Seher ist diese Runde nicht mehr dran.</p>"));
-        }
-    }
-
-    if let Some(rolle) = game.seher_schaut(&form.target) {
-        game.last_seher_result = Some((form.target.clone(), rolle));
-    }
-
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
-        player.bereits_gesehen = true; 
-    }
-
-    game.current_phase(); */
-    //Redirect::to(&format!("/{}", form.actor))
-
-   let template = tokio::fs::read_to_string("user.html")
-        .await
-        .unwrap_or("<h1>Fehler</h1>".to_string());
-
-    let safe_username = htmlescape::encode_minimal(&form.actor);
-    let rolle_text = "Seher";
-
-    let action_html = match game.seher_schaut(&form.target){
-        Ok(rolle)=>format!(
-                "<p>Du hast gesehen, dass <strong>{}</strong> die Rolle {:?} hat.</p>",
-                htmlescape::encode_minimal(&form.target),
-                rolle
-        ),
-        
-        Err(msg)=>format!(
-                "<p>Fehler: {}</p>",
-                htmlescape::encode_minimal(&msg)
-            ),
-        };
-    let page = template
-        .replace("{{username}}", &safe_username)
-        .replace("{{rolle}}", rolle_text)
-        .replace("{{aktion}}", &action_html);
-
-    Html(page)
 }
 
 async fn winner_show(winner: Winner) -> Html<String> {
     let template = tokio::fs::read_to_string("winner.html")
+        .await
+        .unwrap_or("<h1>Fehler</h1>".to_string());
+
+    let winner_text = format!("{:?}", winner);
+    let page = template.replace("{{winner}}", &winner_text);
+    Html(page)
+}
+
+
+//folgendes noch in Bearbeitung noch nicht notwendig für Prototyp:
+async fn hexe_action(
+    State(state):State<AppState>,
+    Form(form):Form<ActionForm>,
+) ->Redirect{
+    let mut game=state.game.lock().await;
+    
+    let template = tokio::fs::read_to_string("user.html")
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
 
     let winner_text = format!("{:?}", winner);
     let page = template.replace("{{winner}}", &winner_text);
     Html(page)
-}
+}*/
