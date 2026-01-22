@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 mod logic;
 mod roles;
+mod tag_nacht;
 use axum::{
     Router,
     extract::{Form, Path, State},
@@ -47,7 +48,6 @@ async fn main() {
         .route("/start-game", post(start_game))
         .route("/:username", get(show_user))
         .route("/tag", get(tag_show).post(tag_action))
-        //.route("/winner", get(winner_show))
         .route("/nacht/werwolf", post(werwolf_action))
         .route("/nacht/seher", post(seher_action))
         .with_state(state);
@@ -196,6 +196,8 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     *started = true;
     let mut game_logic = state.game.lock().await;
     game_logic.verteile_rollen();
+
+    //game_logic.current_phase();
     for p in game_logic.players.iter() {
         let safe_username = encode(&p.name);
         let url = format!("http://127.0.0.1:7878/{}", safe_username);
@@ -232,68 +234,73 @@ async fn werwolf_action(
     Form(form): Form<ActionForm>,
 ) -> Html<String> {
     let mut game = state.game.lock().await;
-    if game.phase != Phase::WerwölfePhase {
-        println!("Es ist gerade keine Werwolf Phase");
-        return Html(format!("<p>Es ist gerade keine Werwolf Phase</p>"));
-    }
-
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
-        if !player.lebend || player.bereits_gesehen {
-            println!("Werwolf darf diese Runde nicht mehr handeln.");
-            return Html(format!(
-                "<p>Werwolf darf diese Runde nicht mehr handeln.</p>"
-            ));
-        }
-    }
-
-    game.werwolf_toetet(&form.target);
-
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
-        player.bereits_gesehen = true;
-    }
-
-    game.naechste_phase();
-    let rolle_text = "Werwolf";
     //Redirect::to(&format!("/{}", form.actor))
+    if let Some(winner) = game.check_win() {
+        return winner_show(winner).await;
+    }
     let template = tokio::fs::read_to_string("user.html")
         .await
         .unwrap_or("<h1>Fehler</h1>".to_string());
 
     let safe_username = htmlescape::encode_minimal(&form.actor);
+    let action_html = match game.werwolf_toetet(&form.actor, &form.target) {
+        Ok(()) => format!(
+            "<p>Du hast <strong>{}</strong> getötet.</p>",
+            htmlescape::encode_minimal(&form.target)
+        ),
+        Err(msg) => format!("<p>Fehler: {}</p>", htmlescape::encode_minimal(&msg)),
+    };
 
-    let action_html = format!(
-        "<p>Du hast <strong>{}</strong> getötet.</p>",
-        htmlescape::encode_minimal(&form.target)
-    );
+    println!("Phase NACH Aktion: {:?}", game.phase);
 
-    println!("Phase NACH Aktion = {:?}", game.phase);
+    let rolle_text = "Werwolf";
+    //println!("Phase NACH Aktion = {:?}", game.phase);
     let page = template
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", rolle_text)
         .replace("{{aktion}}", &action_html);
-
     Html(page)
 }
 
 async fn tag_show(State(state): State<AppState>) -> Html<String> {
-  
     let mut game = state.game.lock().await;
-    if let Some(winner) =game.check_win(){
-            return winner_show(winner).await;
-    }
+    
+    let winner_da = game.check_win();
+        
+    //let form = NameForm{ username: String:: from("")};
     let template = tokio::fs::read_to_string("tag-action.html")
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
+    /* let users_list: String = users
+       .iter()
+       .map(|u| format!("<li>{}</li>", htmlescape::encode_minimal(u)))
+       .collect::<Vec<_>>()
+       .join("\n");
+    */
 
     let users_html: String = game
         .players
         .iter()
+        .filter(|p| p.lebend)
         .map(|u| format!("<li>{}</li>", htmlescape::encode_minimal(&u.name)))
         .collect::<Vec<_>>()
         .join("\n");
+
     let phase = format!("{:?}", game.phase);
 
-    let action_html = if game.phase == crate::logic::Phase::Tag {
+    //let s_username = htmlescape::encode_minimal(&safe_username);
+
+    let action_html = if let Some(winner)= winner_da{
+        let winner_text = match winner {
+            crate::logic::Winner::Dorf => "Dorf",
+            crate::logic::Winner::Werwolf => "Werwolf",
+        };
+        format!(
+            "<p>Glückwunsch Team <strong>{}</strong>! Ihr habt gewonnen.</p>",
+            winner_text
+        )
+    }    
+    else if game.phase == crate::logic::Phase::Tag {
         format!(
             r#"
             <h2>Tagaktion</h2>
@@ -303,13 +310,14 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
             </form>
             "#
         )
-    } else {
+    } 
+    else {
         format!(
             "<p>Ihr habt <strong>{}</strong> getötet.</p>",
-            htmlescape::encode_minimal(game.tag_opfer.as_deref().unwrap_or("Unbekannt"))
+            htmlescape::encode_minimal(game.tag_opfer.as_deref().unwrap_or("Niemand"))
         )
     };
-
+   
     let game_page = template
         .replace("{{phase}}", &phase)
         .replace("{{users}}", &users_html)
@@ -319,60 +327,35 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
 }
 async fn tag_action(State(state): State<AppState>, Form(form): Form<NameForm>) -> Redirect {
     let mut game = state.game.lock().await;
-
+    let vorher = game.phase.clone();
     if game.phase == Phase::Tag {
         game.tag_lynchen(&form.username);
-        game.naechste_phase();
-        game.current_phase();
+
         println!("Phase NACH Tag = {:?}", game.phase);
     }
-
-    Redirect::to("/tag")
+      Redirect::to("/tag")
 }
 
 async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm>) -> Html<String> {
     let mut game = state.game.lock().await;
+    //let vorher = game.phase.clone();
 
-    if game.phase != Phase::SeherPhase {
-        println!("Seher ist nicht dran.");
-        return Html(format!("<p>Seher ist nicht dran.</p>"));
-    }
-
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
-        if !player.lebend || player.bereits_gesehen {
-            println!("Seher darf diese Runde nicht mehr handeln.");
-            return Html(format!("<p>Seher ist diese Runde nicht mehr dran.</p>"));
-        }
-    }
-
-    if let Some(rolle) = game.seher_schaut(&form.target) {
-        game.last_seher_result = Some((form.target.clone(), rolle));
-    }
-
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
-        player.bereits_gesehen = true;
-    }
-
-    game.current_phase();
-    //Redirect::to(&format!("/{}", form.actor))
     let template = tokio::fs::read_to_string("user.html")
         .await
         .unwrap_or("<h1>Fehler</h1>".to_string());
 
     let safe_username = htmlescape::encode_minimal(&form.actor);
-
-    let action_html = if let Some(rolle) = game.seher_schaut(&form.target) {
-        game.last_seher_result = Some((form.target.clone(), rolle));
-        format!(
-            "<p>Du hast gesehen, dass <strong>{}</strong> die Rolle {:?} hat.</p>",
-            htmlescape::encode_minimal(&form.target),
-            rolle
-        )
-    } else {
-        "<p>Die Aktion konnte nicht durchgeführt werden.</p>".to_string()
-    };
     let rolle_text = "Seher";
 
+    let action_html = match game.seher_schaut(&form.target) {
+        Ok(rolle) => format!(
+            "<p>Du hast gesehen, dass <strong>{}</strong> die Rolle {:?} hat.</p>",
+            htmlescape::encode_minimal(&form.target),
+            rolle        ),
+
+        Err(msg) => format!("<p>Fehler: {}</p>", htmlescape::encode_minimal(&msg)),
+    };
+    
     let page = template
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", rolle_text)
@@ -380,12 +363,13 @@ async fn seher_action(State(state): State<AppState>, Form(form): Form<ActionForm
 
     Html(page)
 }
+
 async fn winner_show(winner: Winner) -> Html<String> {
     let template = tokio::fs::read_to_string("winner.html")
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
 
-      let winner_text = format!("{:?}", winner);
+    let winner_text = format!("{:?}", winner);
     let page = template.replace("{{winner}}", &winner_text);
     Html(page)
 }
