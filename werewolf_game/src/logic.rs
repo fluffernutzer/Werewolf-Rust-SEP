@@ -43,11 +43,11 @@ pub struct Game {
     pub amor_hat_gewaehlt:bool,
     pub jaeger_ziel:Option<String>,
     pub last_seher_result:Option<(String,Rolle)>,
-    amor_done:bool,
-    werwoelfe_done:bool,
-    seher_done:bool,
-    hexe_done:bool,
-    abstimmung_done:bool,
+    pub amor_done:bool,
+    pub werwoelfe_done:bool,
+    pub seher_done:bool,
+    pub hexe_done:bool,
+    pub abstimmung_done:bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -149,84 +149,19 @@ impl Game {
             .map(|p| &p.rolle)
     }
 
-    pub fn naechste_phase(&mut self) {
-        self.phase = match self.phase {
-            Phase::Tag => 
-            if self.runden==1{
-                Phase::AmorPhase
-            } else {
-                Phase::WerwölfePhase
-            }
-            Phase::AmorPhase=>Phase::WerwölfePhase,
-            Phase::WerwölfePhase=> Phase::SeherPhase,
-            Phase::SeherPhase=>Phase::HexePhase,
-            Phase::HexePhase=>{
-            //Phase::Nacht => {
-                self.runden += 1;
-                self.abstimmung_done=false;
-                self.werwoelfe_done=false;
-                self.seher_done=false;
-                self.hexe_done=false;
-                self.amor_done=false;
-                Phase::Tag
-            }
-            //Phase::Nacht=>Phase::WerwölfePhase,
-        };
-    }
+   
 
-    pub fn phase_has_role(&self)->bool{
-        match self.phase{
-            Phase::AmorPhase=>self.rolle_da(Rolle::Amor),
-            Phase::WerwölfePhase=>self.rolle_da(Rolle::Werwolf),
-            Phase::SeherPhase=>self.rolle_da(Rolle::Seher),
-            Phase::HexePhase=>self.rolle_da(Rolle::Hexe),
-            Phase::Tag=>true,     
-           }
-    }
-
-    pub fn phase_done(&self)->bool{
-        match self.phase{
-            Phase::Tag=>{
-                if self.runden==1{
-                    true
-                }else{
-                    self.abstimmung_done
-                }
-            }
-            Phase::AmorPhase=>self.amor_done,
-            Phase::WerwölfePhase=>self.werwoelfe_done,
-            Phase::SeherPhase=>self.seher_done,
-            Phase::HexePhase=>self.hexe_done,
-            
-        }
-    }
-    
-  pub fn current_phase(&mut self){
-    println!( "DEBUG: phase={:?}, runde={}, amor_done={}, ww_done={}, seher_done={}, hexe_done={}, abst_done={}", self.phase, self.runden, self.amor_done, self.werwoelfe_done, self.seher_done, self.hexe_done, self.abstimmung_done );
-        loop{
-            if !self.phase_has_role(){
-                self.naechste_phase();
-                continue;
-                }
-            if self.phase_done(){
-                self.naechste_phase();
-                continue;
-            }
-            
-            break;
-            }
-    }
-
-
-    pub fn rolle_da(&self, rolle: Rolle)->bool{
-        self.players.iter().any(|p|p.rolle==rolle&&p.lebend)
-    }
-
+  
     pub fn tag_lynchen(&mut self, name: &str) {
+        if self.runden==1{
+            println!("(TAG) In Runde 1 wird nicht gelyncht.");
+        self.phase_change();
+        } else {
         self.nacht_opfer=Some(name.to_string());
         println!("(TAG) Dorf lyncht {}", name);
         self.abstimmung_done=true;
-    }
+        self.phase_change();}}
+    
 
     pub fn werwolf_toetet(&mut self, actor_name:&str, victim_name: &str) ->Result<(),String>{
          if self.phase!=Phase::WerwölfePhase{
@@ -262,8 +197,9 @@ impl Game {
         println!("(NACHT) Werwölfe greifen {} an", victim_name);
         self.spieler_stirbt(&victim_name);
         
-        println!("(NACHT) Werwolf tötet {}", victim_name);
+    
         self.werwoelfe_done=true;
+        self.phase_change();
         Ok(())
     }
 
@@ -297,12 +233,10 @@ pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
         
         println!("(NACHT) Seher überprüft {}", target_name);
 
-        seher.bereits_gesehen=true;
-
-        self.naechste_phase();
-        self.current_phase();
-
+       seher.bereits_gesehen=true;
         self.seher_done=true;
+        
+        self.phase_change();
         Ok(target_rolle)
     }
 
@@ -327,7 +261,9 @@ pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
                 geheilter.lebend=true;
                 self.heiltrank_genutzt=true;
                 println!("(Nacht) Hexe heilt {}", opfer_name);
-                
+
+                self.hexe_done=true;
+                self.phase_change();
                 Ok(())
             }
 
@@ -345,11 +281,15 @@ pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
                 self.bereits_getoetet=true;
                 println!("Hexe tötet noch dazu: {}", extra_target);
 
+                self.hexe_done=true;
+                self.phase_change();
                 Ok(())
             }
 
             HexenAktion::NichtsTun=>{
                 println!("Hexe tut nichts.");
+                self.hexe_done=true;
+                self.phase_change();
                 Ok(())
             }
 
@@ -401,6 +341,7 @@ pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
         self.liebender_2=Some (target_2.to_string());
         self.liebende_aktiv=true;
         self.amor_hat_gewaehlt=true;
+        self.phase_change();
         
         
 

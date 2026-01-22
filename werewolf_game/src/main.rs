@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 mod logic;
 mod roles;
+mod tag_nacht;
 use axum::{
     Router,
     extract::{Form, Path, State},
@@ -195,7 +196,8 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
     *started = true;
     let mut game_logic = state.game.lock().await;
     game_logic.verteile_rollen();
-    game_logic.current_phase();
+  
+    //game_logic.current_phase();
     for p in game_logic.players.iter() {
         let safe_username = encode(&p.name);
         let url = format!("http://127.0.0.1:7878/{}", safe_username);
@@ -281,20 +283,12 @@ async fn werwolf_action(
     Form(form): Form<ActionForm>,
 ) -> Html<String> {
     let mut game = state.game.lock().await;
-  
-
-   /* if let Some(player) = game.players.iter_mut().find(|p| p.name == form.actor) {
-        player.bereits_gesehen = true; 
-    }*/
-
     //Redirect::to(&format!("/{}", form.actor))
     let template = tokio::fs::read_to_string("user.html")
         .await
         .unwrap_or("<h1>Fehler</h1>".to_string());
 
     let safe_username = htmlescape::encode_minimal(&form.actor);
-    println!("Phase VOR Aktion: {:?}", game.phase);
-
     let action_html = match game.werwolf_toetet(&form.actor,&form.target){
         Ok(())=>format!(
         "<p>Du hast <strong>{}</strong> getötet.</p>",
@@ -306,11 +300,7 @@ async fn werwolf_action(
         ),
 
     };
-
-   
    println!("Phase NACH Aktion: {:?}", game.phase);
-   game.current_phase(); 
-   println!("Phase NACH current_phase(): {:?}", game.phase);
 
     let rolle_text = "Werwolf";
     //println!("Phase NACH Aktion = {:?}", game.phase);
@@ -318,7 +308,6 @@ async fn werwolf_action(
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", rolle_text)
         .replace("{{aktion}}", &action_html);
-
     Html(page)
 }
 
@@ -373,13 +362,12 @@ async fn tag_show(State(state): State<AppState>) -> Html<String> {
 }
 async fn tag_action(State(state): State<AppState>, Form(form): Form<NameForm>) -> Redirect {
     let mut game = state.game.lock().await;
-
     if game.phase == Phase::Tag {
         game.tag_lynchen(&form.username);
-        game.naechste_phase();
-        game.current_phase();
+   
         println!("Phase NACH Tag = {:?}", game.phase);
     }
+
 
     Redirect::to("/tag")
 }
@@ -484,19 +472,6 @@ async fn seher_action(
                 htmlescape::encode_minimal(&msg)
             ),
         };
-    
-
-    /*if let Some(rolle) = game.seher_schaut(&form.target) {
-    game.last_seher_result = Some((form.target.clone(), rolle));
-    format!(
-        "<p>Du hast gesehen, dass <strong>{}</strong> die Rolle {:?} hat.</p>",
-        htmlescape::encode_minimal(&form.target),
-        rolle
-    )
-} else {
-    "<p>Die Aktion konnte nicht durchgeführt werden.</p>".to_string()
-};*/
-    
     let page = template
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", rolle_text)
