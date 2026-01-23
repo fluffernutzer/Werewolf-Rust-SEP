@@ -36,6 +36,7 @@ pub struct Game {
     pub runden: u32,
     pub heiltrank_genutzt:bool,
     pub bereits_getoetet: bool,
+    pub tag_opfer: Option<String>,
     pub nacht_opfer: Option<String>,
     pub liebender_1:Option<String>,
     pub liebender_2:Option<String>,
@@ -77,6 +78,7 @@ impl Game {
             runden: 1,
             heiltrank_genutzt: false,
             bereits_getoetet: false,
+            tag_opfer: None,
             nacht_opfer:None,
             liebender_1:None,
             liebender_2:None,
@@ -153,14 +155,19 @@ impl Game {
 
   
     pub fn tag_lynchen(&mut self, name: &str) {
-        if self.runden==1{
+        /*if self.runden==1{
             println!("(TAG) In Runde 1 wird nicht gelyncht.");
         self.phase_change();
         } else {
         self.nacht_opfer=Some(name.to_string());
         println!("(TAG) Dorf lyncht {}", name);
         self.abstimmung_done=true;
-        self.phase_change();}}
+        self.phase_change();}}*/
+        self.tag_opfer = Some(name.to_string());
+        println!("(TAG) Dorf lyncht {}", name);
+        self.spieler_stirbt(name);
+        self.phase_change();
+    }
     
 
     pub fn werwolf_toetet(&mut self, actor_name:&str, victim_name: &str) ->Result<(),String>{
