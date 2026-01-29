@@ -27,7 +27,7 @@ use image::Luma;
 use uuid::Uuid;
 use webbrowser;
 
-use crate::{logic::{Game, Phase}, ws::{send_game_state, ws_handler}};
+use crate::{logic::{Game, HexenAktion, Phase}, ws::{send_game_state, ws_handler}};
 
 #[derive(Deserialize)]
 struct NameForm {
@@ -114,3 +114,34 @@ impl log::Log for ClientLogger {
 
     fn flush(&self) {}
 }
+
+/*async fn hexe_action(
+    State(state):State<AppState>,
+    Form(form):Form<ActionForm>,
+)->Html<String>{
+    let mut game=state.game.lock().await;
+    
+    let template=tokio::fs::read_to_string("user.html")
+    .await.unwrap_or("<h1>Fehler</h1>".to_string());
+    let actor_name=form.actor.clone();
+    let extra_target = form.target.clone();
+    let aktion=match form.action_kind.as_str(){
+        "Heilen"=>HexenAktion::Heilen,
+        "Vergiften"=>HexenAktion::Vergiften,
+        _=>HexenAktion::NichtsTun,
+        
+    };
+    let action_html=match game.hexe_arbeitet(aktion, &actor_name, &extra_target){
+        Ok(())=>"<p>Aktion erfolgreich</p>".to_string(),
+        Err(msg)=>format!("<p>Fehler: {}</p>", htmlescape::encode_minimal(&msg)),
+    };
+    println!("Phase NACH Aktion: {:?}", game.phase);
+    let safe_username=htmlescape::encode_minimal(&form.actor);
+    let rolle_text="Hexe";
+    let page=template
+    .replace("{{username}}",&safe_username)
+    .replace("{{rolle}}", rolle_text)
+    .replace("{{aktion}}", &action_html);
+    Html(page)
+}
+*/
