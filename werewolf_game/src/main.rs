@@ -23,7 +23,7 @@ use image::Luma;
 use uuid::Uuid;
 use webbrowser;
 
-use crate::logic::{Game, Phase, Winner};
+use crate::logic::{Game, HexenAktion, Phase, Winner};
 
 #[derive(Deserialize)]
 struct NameForm {
@@ -43,6 +43,7 @@ struct AppState {
 #[derive(Deserialize)]
 struct ActionForm {
     actor: String,
+    action_kind: String,
     target: String,
 }
 #[tokio::main]
@@ -64,6 +65,7 @@ async fn main() {
         //.route("/winner", get(winner_show))
         .route("/nacht/werwolf", post(werwolf_action))
         .route("/nacht/seher", post(seher_action))
+        .route("/nacht/hexe",post(hexe_action))
         .with_state(state);
 
     println!("Running on http://127.0.0.1:7878");
@@ -103,16 +105,20 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
     let safe_username = htmlescape::encode_minimal(&username);
-
     let mut game = state.game.lock().await;
     let rolle_text = match game.rolle_von(&username) {
         Some(rolle) => format!("{:?}", rolle),
         None => "Unbekannt".to_string(),
     };
-
+    
     let phase = game.phase.clone();
     let last_seher_result = game.last_seher_result.clone();
 
+    let opfer_text=match &game.nacht_opfer{
+                    Some(name)=>format!("Das Opfer der Werwölfe ist {}. Was willst du tun?", name),
+                    None=>"Die Werwölfe haben noch kein Opfer ausgewählt.".to_string(),
+                };
+                
     let player_opt = game.players.iter_mut().find(|p| p.name == username);
 
     let (rolle_text, action_html) = if let Some(player) = player_opt {
@@ -130,6 +136,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
                             <form action="/nacht/werwolf" method="post">
                                 <input type="hidden" name="actor" value="{username}">
                                 <input name="target" placeholder="Opfer">
+                                <input type="hidden" name="action_kind" value="Toeten">
                                 <button>Töten</button>
                             </form>
                             "#,
@@ -157,6 +164,7 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
                             <form action="/nacht/seher" method="post">
                                 <input type="hidden" name="actor" value="{username}">
                                 <input name="target" placeholder="Spieler">
+                                <input type="hidden" name="action_kind" value="Schauen">
                                 <button>Schauen</button>
                             </form>
                             "#,
@@ -180,6 +188,43 @@ async fn show_user(Path(username): Path<String>, State(state): State<AppState>) 
                     )
                 }
             }
+            crate::roles::Rolle::Hexe=> {   
+                if phase==crate::logic::Phase::HexePhase
+                &&player.lebend
+                //&&!hexe_done
+                {
+                    (
+                        "Hexe".to_string(),
+                        format!(
+                            r#"
+                            <h2>Hexen-Aktion</h2>
+                            
+                            <form action="/nacht/hexe" method="post">
+                                <input type="hidden" name="actor" value="{username}">
+                                <p>{opfer}</p>
+                                <label>Was willst du tun:</label>
+                                <select name="action_kind">
+                                    <option value="Heilen">Heilen</option>
+                                    <option value="Vergiften">Vergiften</option>
+                                    <option value="NichtsTun">Nichts tun</option>
+                                </select>
+
+                            <label>zusätzliches Opfer (nur wenn du Vergiften wählst):</label>
+                            <input name="target" placeholder="Spieler">
+
+                            <button>Ausführen</button>
+                            </form>
+                            "#,
+                            username=safe_username,
+                            opfer=opfer_text
+                        ),
+                    )
+
+                }else {
+                    ("Hexe".to_string(),
+                    "<p>Warte bist du dran bist.</p>".to_string(),
+                )
+                }}
             _ => ("Dorfbewohner".to_string(), String::new()),
         }
     } else {
@@ -244,9 +289,6 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
 
     Html(game_page)
 }
-
-
-
 async fn werwolf_action(
     State(state): State<AppState>,
     Form(form): Form<ActionForm>,
@@ -259,10 +301,11 @@ async fn werwolf_action(
 
     let safe_username = htmlescape::encode_minimal(&form.actor);
     let action_html = match game.werwolf_toetet(&form.actor,&form.target){
-        Ok(())=>format!(
-        "<p>Du hast <strong>{}</strong> getötet.</p>",
-        htmlescape::encode_minimal(&form.target)
-    ),
+        Ok(())=>{
+            game.nacht_opfer=Some(form.target.clone());
+            format!("<p>Du hast <strong>{}</strong> getötet.</p>",
+            htmlescape::encode_minimal(&form.target))
+        },
         Err(msg)=>format!(
             "<p>Fehler: {}</p>",
             htmlescape::encode_minimal(&msg)
@@ -279,9 +322,6 @@ async fn werwolf_action(
         .replace("{{aktion}}", &action_html);
     Html(page)
 }
-
-
-
 async fn tag_show(State(state): State<AppState>) -> Html<String> {
   
     let mut game = state.game.lock().await;
@@ -373,6 +413,8 @@ async fn seher_action( State(state): State<AppState>, Form(form): Form<ActionFor
                 htmlescape::encode_minimal(&msg)
             ),
         };
+
+    println!("Phase NACH Aktion: {:?}", game.phase);
     let page = template
         .replace("{{username}}", &safe_username)
         .replace("{{rolle}}", rolle_text)
@@ -387,5 +429,35 @@ async fn winner_show(winner: Winner) -> Html<String> {
 
       let winner_text = format!("{:?}", winner);
     let page = template.replace("{{winner}}", &winner_text);
+    Html(page)
+}
+
+async fn hexe_action(
+    State(state):State<AppState>,
+    Form(form):Form<ActionForm>,
+)->Html<String>{
+    let mut game=state.game.lock().await;
+    
+    let template=tokio::fs::read_to_string("user.html")
+    .await.unwrap_or("<h1>Fehler</h1>".to_string());
+    let actor_name=form.actor.clone();
+    let extra_target = form.target.clone();
+    let aktion=match form.action_kind.as_str(){
+        "Heilen"=>HexenAktion::Heilen,
+        "Vergiften"=>HexenAktion::Vergiften,
+        _=>HexenAktion::NichtsTun,
+        
+    };
+    let action_html=match game.hexe_arbeitet(aktion, &actor_name, &extra_target){
+        Ok(())=>"<p>Aktion erfolgreich</p>".to_string(),
+        Err(msg)=>format!("<p>Fehler: {}</p>", htmlescape::encode_minimal(&msg)),
+    };
+    println!("Phase NACH Aktion: {:?}", game.phase);
+    let safe_username=htmlescape::encode_minimal(&form.actor);
+    let rolle_text="Hexe";
+    let page=template
+    .replace("{{username}}",&safe_username)
+    .replace("{{rolle}}", rolle_text)
+    .replace("{{aktion}}", &action_html);
     Html(page)
 }
