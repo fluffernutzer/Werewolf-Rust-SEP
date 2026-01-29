@@ -17,6 +17,10 @@ use tokio::{
     sync::Mutex,
 };
 use urlencoding::encode;
+use local_ip_address::local_ip;
+use qrcode::QrCode;
+use image::Luma;
+use uuid::Uuid;
 use webbrowser;
 
 use crate::logic::{Game, Phase, Winner};
@@ -25,10 +29,16 @@ use crate::logic::{Game, Phase, Winner};
 struct NameForm {
     username: String,
 }
+struct PlayerDevice {
+    name: String,
+    token: String,
+}
 #[derive(Clone)]
 struct AppState {
     game: Arc<Mutex<Game>>,
     game_started: Arc<Mutex<bool>>,
+    server_ip: String,
+    play_dev: Arc<Mutex<Vec<PlayerDevice>>>,
 }
 #[derive(Deserialize)]
 struct ActionForm {
@@ -37,9 +47,13 @@ struct ActionForm {
 }
 #[tokio::main]
 async fn main() {
+    let ip = local_ip().unwrap().to_string();
+    generate_qr(&ip);
     let state = AppState {
         game: Arc::new(Mutex::new(Game::new())),
         game_started: Arc::new(Mutex::new(false)),
+        server_ip: ip.clone(),
+        play_dev: Arc::new(Mutex::new(Vec::new())),
     };
     let app = Router::new()
         .route("/", get(index))
@@ -53,7 +67,7 @@ async fn main() {
         .with_state(state);
 
     println!("Running on http://127.0.0.1:7878");
-    let listener = TcpListener::bind("127.0.0.1:7878").await.unwrap();
+    let listener = TcpListener::bind("0.0.0.0:7878").await.unwrap();
 
     axum::serve(listener, app).await.unwrap();
 }
@@ -69,9 +83,19 @@ async fn index(State(state): State<AppState>) -> Html<String> {
         .iter()
         .map(|u| format!("<li>{}</li>", htmlescape::encode_minimal(&u.name)))
         .collect();
-
-    let page = template.replace("{{users}}", &users_html);
+    let join_url = format!("http://{}:7878", state.server_ip);
+    let qr_svg=generate_qr(&state.server_ip);
+    let page = template.replace("{{users}}", &users_html).replace("{{join_url}}", &join_url).replace("{{qr}}", &qr_svg);
     Html(page)
+}
+
+fn generate_qr(ip: &str) -> String {
+    let url = format!("http://{}:7878", ip);
+    let code = QrCode::new(url.as_bytes()).unwrap();
+    //let image = code.render::<Luma<u8>>().build();
+
+    //image.save("qr.png").unwrap();
+    code.render::<qrcode::render::svg::Color>().min_dimensions(220,220).build()
 }
 
 async fn show_user(Path(username): Path<String>, State(state): State<AppState>) -> Html<String> {
@@ -174,8 +198,14 @@ async fn add_user(State(state): State<AppState>, Form(form): Form<NameForm>) -> 
     if *started {
         return Redirect::to("/");
     }
+    let token = uuid::Uuid::new_v4().to_string();
+    let player = PlayerDevice {
+        name: form.username.clone(),
+        token: token.clone(),
+    };
+    state.play_dev.lock().await.push(player);
     let mut game = state.game.lock().await;
-    game.add_player(form.username);
+    game.add_player(form.username.clone());
     Redirect::to("/")
 }
 async fn start_game(State(state): State<AppState>) -> Html<String> {
@@ -186,10 +216,14 @@ async fn start_game(State(state): State<AppState>) -> Html<String> {
   
     //game_logic.current_phase();
     for p in game_logic.players.iter() {
+        let url = format!("http://{}:7878/{}", state.server_ip, encode(&p.name));
+        println!("Spieler {} geht zu {}", p.name, url);
+    }
+    /*for p in game_logic.players.iter() {
         let safe_username = encode(&p.name);
         let url = format!("http://127.0.0.1:7878/{}", safe_username);
         let _ = webbrowser::open(&url);
-    }
+    }*/
     let template = tokio::fs::read_to_string("start_game.html")
         .await
         .unwrap_or("<h1>Could not read file</h1>".to_string());
