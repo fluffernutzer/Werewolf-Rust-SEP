@@ -27,6 +27,9 @@ pub struct Spieler {
     pub rolle: Rolle,
     pub lebend: bool,
     pub bereits_gesehen:bool,
+    //Für Websocket-Abstimmungen/Bereit zum Spielen: 
+    pub ready_state: bool,
+    pub has_voted: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -66,6 +69,8 @@ impl Spieler {
             rolle,
             lebend:true,
             bereits_gesehen:false,
+            ready_state:false,
+            has_voted:false,
         }
     }
 }
@@ -104,6 +109,8 @@ impl Game {
             rolle: Rolle::Dorfbewohner, //Platzhalter wird noch durchgemischt
             lebend: true,
             bereits_gesehen:false,
+            ready_state:false,
+            has_voted:false,
         });
     }
 
