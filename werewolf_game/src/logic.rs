@@ -17,7 +17,7 @@ pub enum Phase {
 pub enum HexenAktion{
     Heilen,
     NichtsTun,
-    Toeten,
+    Vergiften,
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +38,7 @@ pub struct Game {
     pub bereits_getoetet: bool,
     pub tag_opfer: Option<String>,
     pub nacht_opfer: Option<String>,
+    pub hexe_opfer:Option<String>,
     pub liebender_1:Option<String>,
     pub liebender_2:Option<String>,
     pub liebende_aktiv:bool,
@@ -80,6 +81,7 @@ impl Game {
             bereits_getoetet: false,
             tag_opfer: None,
             nacht_opfer:None,
+            hexe_opfer:None,
             liebender_1:None,
             liebender_2:None,
             liebende_aktiv:false,
@@ -203,8 +205,6 @@ impl Game {
 
         println!("(NACHT) Werwölfe greifen {} an", victim_name);
         self.spieler_stirbt(&victim_name);
-        
-    
         self.werwoelfe_done=true;
         self.phase_change();
         Ok(())
@@ -251,7 +251,15 @@ pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
     
     //Hexe darf nur einmal heilen und nur einmal töten
 
-    pub fn hexe_arbeitet(&mut self, aktion:HexenAktion, extra_target:&str)->Result<(),String>{
+    pub fn hexe_arbeitet(&mut self, aktion:HexenAktion, actor_name:&str, extra_target:&str)->Result<(),String>{
+        let hexe=self.players
+                        .iter()
+                        .find(|p| p.rolle==Rolle::Hexe)
+                        .ok_or("Es gibt keine Hexe im Spiel.")?;
+                if !hexe.lebend{
+                    return Err("Du bist aus dem Spiel schon raus.".into());
+                }
+                
         match aktion {
             HexenAktion::Heilen=> {
                 if self.heiltrank_genutzt{
@@ -259,35 +267,41 @@ pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
                 }
                 
                 let opfer_name=self.nacht_opfer.as_ref().ok_or("Es gibt kein Opfer.")?;
-
                 let geheilter=self.players
                         .iter_mut()
                         .find(|p| p.name==*opfer_name)
                         .ok_or("Spieler nicht gefunden.")?;
 
                 geheilter.lebend=true;
-                self.heiltrank_genutzt=true;
+
                 println!("(Nacht) Hexe heilt {}", opfer_name);
 
+                self.nacht_opfer=None;
+                self.heiltrank_genutzt=true;
                 self.hexe_done=true;
                 self.phase_change();
                 Ok(())
             }
 
-            HexenAktion::Toeten=>{
+            HexenAktion::Vergiften=>{
                  if self.bereits_getoetet{
-                    return Err("Die Hexe hat bereits einmal jemanden getötet.".into());
+                    return Err("Die Hexe darf nur einmal im Spiel jemanden vergiften.".into());
                 }
-                
-                let opfer=self.players
+               let zusaetzliches_opfer=self.players
                         .iter_mut()
                         .find(|p|p.name==extra_target)
                         .ok_or("Opfer konnte nicht gefunden werden")?;
 
-                opfer.lebend=false;
+                if !zusaetzliches_opfer.lebend{
+                    return Err("Das Opfer ist bereits tot.".into());
+                }
+                if extra_target==actor_name{
+                    return Err("Du kannst dich nicht selber vergiften.".into());
+                }
+                self.hexe_opfer=Some(extra_target.to_string());
+                self.spieler_stirbt(&extra_target);
                 self.bereits_getoetet=true;
                 println!("Hexe tötet noch dazu: {}", extra_target);
-
                 self.hexe_done=true;
                 self.phase_change();
                 Ok(())
