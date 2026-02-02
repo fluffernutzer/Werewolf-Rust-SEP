@@ -10,14 +10,17 @@ use std::{os::macos::raw::stat, sync::Arc};
 use tokio::sync::{Mutex, broadcast};
 use urlencoding::encode;
 use webbrowser;
+use base64::{Engine as _, engine::general_purpose};
+use qrcode::QrCode;
 
-use crate::{AppState, logic::{Game, Phase, Spieler, Winner}, roles::Rolle};
+use crate::{AppState, PlayerDevice, generate_qr, logic::{Game, Phase, Spieler, Winner}, roles::Rolle};
 
 #[derive(Template)]
 #[template(path = "index.html")]
 struct IndexTemplate<'a> {
     players: Vec<PlayerTemplate<'a>>,
     phase: String,
+    qr_code: String,
 }
 
 #[derive(Template)]
@@ -101,13 +104,19 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                                 let _ = game.verteile_rollen();
                                 for p in game.players.iter() {
                                     let safe_username = encode(&p.name);
-                                    let url = format!("http://127.0.0.1:7878/{}", safe_username);
+                                    let url = format!("http://{}:7878/{}", state.server_ip, encode(&p.name));
                                     let _ = webbrowser::open(&url);
                                 }
                             }
                         }
                         ClientMessage::AddUser { username } => {
-                            game.add_player(username);
+                            let token = uuid::Uuid::new_v4().to_string();
+                            let player = PlayerDevice {
+                                name: username.clone(),
+                                token: token.clone(),};
+                            state.play_dev.lock().await.push(player);
+                            game.add_player(username.clone());
+
                         }
                         ClientMessage::TagAction { direction } => {
                             if let Phase::Tag = game.phase {
@@ -207,6 +216,8 @@ pub async fn send_game_state(state: &AppState) {
 
 pub async fn index(State(state): State<AppState>) -> Html<String> {
     let game = state.game.lock().await;
+    let qr_svg=generate_qr(&state.server_ip);
+    let qr_code_base64 = general_purpose::STANDARD.encode(qr_svg.as_bytes());
 
     let players: Vec<PlayerTemplate> = game.players
         .iter()
@@ -227,6 +238,7 @@ pub async fn index(State(state): State<AppState>) -> Html<String> {
     let template = IndexTemplate {
         players,
         phase: format!("{:?}", game.phase),
+        qr_code: format!("data:image/svg+xml;base64,{}", qr_code_base64),
     };
 
     Html(template.render().unwrap())
