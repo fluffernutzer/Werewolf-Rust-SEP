@@ -9,6 +9,8 @@ use axum::{
     response::{Html, Json, Redirect},
     routing::{get, post},
 };
+use local_ip_address::local_ip;
+use qrcode::QrCode;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::{
@@ -41,6 +43,8 @@ struct AppState {
     server_ip: String,
     play_dev: Arc<Mutex<Vec<PlayerDevice>>>,
     tx: broadcast::Sender<String>,
+    server_ip: String,
+    play_dev: Arc<Mutex<Vec<PlayerDevice>>>,
 }
 #[derive(Deserialize)]
 struct ActionForm {
@@ -53,10 +57,13 @@ struct ActionForm {
 
 async fn main() {
     let (tx, _rx) = broadcast::channel(32);
+    let ip = local_ip().unwrap().to_string();
     let state = AppState {
         game: Arc::new(Mutex::new(Game::new())),
         game_started: Arc::new(Mutex::new(false)),
-        tx
+        tx,
+        server_ip: ip.clone(),
+        play_dev: Arc::new(Mutex::new(Vec::new())),
     };
     let app = Router::new()
         .route("/", get(ws::index))
@@ -67,8 +74,19 @@ async fn main() {
     println!("Running on http://127.0.0.1:7878");
     let listener = TcpListener::bind("0.0.0.0:7878").await.unwrap();
 
+
     axum::serve(listener, app).await.unwrap();
 }
+
+fn generate_qr(ip: &str) -> String {
+    let url = format!("http://{}:7878", ip);
+    let code = QrCode::new(url.as_bytes()).unwrap();
+    //let image = code.render::<Luma<u8>>().build();
+
+    //image.save("qr.png").unwrap();
+    code.render::<qrcode::render::svg::Color>().min_dimensions(220,220).build()
+}
+
 
 
 async fn index(State(state): State<AppState>) -> Html<String> {
