@@ -88,6 +88,34 @@
       <button onclick="sendAction('SeherAction', 'seher-target')">Schauen</button>
       <div id="seher-result"></div>
     </div>
+  {% elif rolle == "Hexe" %}
+    <div>
+      <h3>Hexen-Aktionen;</h3>
+      <p>Heilen:</p>
+      <select id="seher-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('HexenAction', 'extra-target')">Heilen</button>
+      <div id="seher-result"></div>
+      <p>Töten:</p>
+      <select id="seher-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('HexenAction', 'extra-target')">Töten</button>
+      <div id="seher-result"></div>
+      <p>Nichts tun:</p>
+      <select id="seher-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('HexenAction', `Aussetzen`,'extra-target')">Aussetzen</button>
+      <div id="seher-result"></div>
+    </div>
   {% endif %}
 
   {% if phase == "Tag" %}

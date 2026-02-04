@@ -81,34 +81,7 @@ async fn main() {
 fn generate_qr(ip: &str) -> String {
     let url = format!("http://{}:7878", ip);
     let code = QrCode::new(url.as_bytes()).unwrap();
-    //let image = code.render::<Luma<u8>>().build();
-
-    //image.save("qr.png").unwrap();
     code.render::<qrcode::render::svg::Color>().min_dimensions(220,220).build()
 }
 
-
-
-async fn index(State(state): State<AppState>) -> Html<String> {
-    let template = tokio::fs::read_to_string("hello.html")
-        .await
-        .unwrap_or("<h1>Could not read file</h1>".to_string());
-
-    let game = state.game.lock().await;
-    let users_html: String = game
-        .players
-        .iter()
-        .map(|u| format!("<li>{}</li>", htmlescape::encode_minimal(&u.name)))
-        .collect();
-    let join_url = format!("http://{}:7878", state.server_ip);
-    let qr_svg=generate_qr(&state.server_ip);
-    let page = template.replace("{{users}}", &users_html).replace("{{join_url}}", &join_url).replace("{{qr}}", &qr_svg);
-    Html(page)
-}
-
-fn generate_qr(ip: &str) -> String {
-    let url = format!("http://{}:7878", ip);
-    let code = QrCode::new(url.as_bytes()).unwrap();
-    code.render::<qrcode::render::svg::Color>().min_dimensions(220,220).build()
-}
 

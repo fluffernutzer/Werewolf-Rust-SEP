@@ -1,7 +1,9 @@
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use serde::Serialize;
 use crate::roles::Rolle;
 use crate::roles::Team;
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Phase {
@@ -13,7 +15,7 @@ pub enum Phase {
     HexePhase,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,serde::Serialize,serde::Deserialize)]
 pub enum HexenAktion{
     Heilen,
     NichtsTun,
