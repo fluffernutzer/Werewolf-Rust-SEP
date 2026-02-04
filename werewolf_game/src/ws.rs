@@ -152,7 +152,8 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                             }
                         }
                         ClientMessage::HexenAktion { aktion, extra_target } => {
-                            let _ = game.hexe_arbeitet(aktion, extra_target);
+                            //let _ = game.hexe_arbeitet(aktion, extra_target);
+                            println!("Hexe Aktuell noch falsch implementiert");
                             game.runden +=1;
                         }
                         ClientMessage::ChatMessage { sender, message } => {
@@ -309,14 +310,12 @@ async fn handle_vote(
     target: &str,
     action: ActionKind,
 ) -> Result<(), String> {
-    // 1. Setze has_voted für den Spieler
     if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.lebend) {
         player.has_voted = true;
     } else {
         return Err("Spieler nicht gefunden oder nicht lebendig".to_string());
     }
 
-    // 2. Sammle die Namen der berechtigten Spieler (ohne game.phase erneut zu borgen)
     let eligible_player_names: Vec<String> = game.players.iter()
         .filter(|p| {
             p.lebend && match game.phase {
@@ -330,11 +329,9 @@ async fn handle_vote(
         .map(|p| p.name.clone())
         .collect();
 
-    // 3. Prüfe, ob alle berechtigten Spieler abgestimmt haben
     let all_voted = eligible_player_names.iter()
         .all(|name| game.players.iter().find(|p| p.name == *name).unwrap().has_voted);
 
-    // 4. Falls alle abgestimmt haben, führe die Aktion aus
     if all_voted {
         match action {
             ActionKind::DorfLyncht => game.tag_lynchen(target),
@@ -343,7 +340,6 @@ async fn handle_vote(
             ActionKind::SeherSieht =>(),
         };
 
-        // 5. Setze has_voted für alle berechtigten Spieler zurück
         for player in game.players.iter_mut() {
             if eligible_player_names.contains(&player.name) {
                 player.has_voted = false;
@@ -351,11 +347,5 @@ async fn handle_vote(
         }
     }
 
-    Ok(())
-}
-fn dorf_lyncht (game: &mut Game, actor: &str, target: &str) -> Result<(), String> {
-    // Logik für Werwolf-Tötung
-    game.tag_lynchen(target);
-    game.phase_change();
     Ok(())
 }
