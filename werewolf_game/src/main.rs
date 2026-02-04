@@ -20,6 +20,10 @@ use tokio::{
     sync::{Mutex, broadcast},
 };
 use urlencoding::encode;
+use local_ip_address::local_ip;
+use qrcode::QrCode;
+use image::Luma;
+use uuid::Uuid;
 use webbrowser;
 
 use crate::{logic::{Game, Phase}, ws::{send_game_state, ws_handler}};
@@ -43,6 +47,7 @@ struct AppState {
 #[derive(Deserialize)]
 struct ActionForm {
     actor: String,
+    action_kind: String,
     target: String,
 }
 

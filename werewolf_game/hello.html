@@ -4,6 +4,13 @@
 <head>
   <meta charset="utf-8">
   <title>Werwolf</title>
+  <style>
+.qr svg {
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+</style>
+
 </head>
 
 <body>
@@ -15,10 +22,16 @@
     <input type="text" name="username" id="username">
     <button type="submit">Add Name</button>
   </form>
+  <h2>Mitspielen im WLAN</h2>
+  <p><strong>{{join_url}}</strong></p>
+  <p>Oder scannen:</p>
+  <div class="qr">
+    {{qr}}
+  </div>
   <h2>Current Users:</h2>
-    <ul>
-        {{users}}
-    </ul>
+  <ul>
+    {{users}}
+  </ul>
   <p>Please press this when all players are added:</p>
   <form id="prepForm" action="/start-game" method="POST">
     <button type="submit">Prep Game</button>
