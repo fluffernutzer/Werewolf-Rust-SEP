@@ -20,8 +20,6 @@ use tokio::{
     sync::{Mutex, broadcast},
 };
 use urlencoding::encode;
-use local_ip_address::local_ip;
-use qrcode::QrCode;
 use image::Luma;
 use uuid::Uuid;
 use webbrowser;
@@ -43,8 +41,6 @@ struct AppState {
     server_ip: String,
     play_dev: Arc<Mutex<Vec<PlayerDevice>>>,
     tx: broadcast::Sender<String>,
-    server_ip: String,
-    play_dev: Arc<Mutex<Vec<PlayerDevice>>>,
 }
 #[derive(Deserialize)]
 struct ActionForm {
