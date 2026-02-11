@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use futures::future::err;
+use log::info;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use serde::Serialize;
@@ -17,7 +21,7 @@ pub enum Phase {
     DoktorPhase,
 }
 
-#[derive(Debug, Clone,serde::Serialize,serde::Deserialize)]
+#[derive(Debug,Copy, Clone,serde::Serialize,serde::Deserialize)]
 pub enum HexenAktion{
     Heilen,
     NichtsTun,
@@ -60,6 +64,9 @@ pub struct Game {
     //pub abstimmung_done:bool,
     pub geschuetzter_von_doktor:Option<String>,
     pub priester_hat_geworfen: bool,
+    pub abstimmung_done:bool,
+    //
+    pub votes: HashMap<String,Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,6 +115,9 @@ impl Game {
             //abstimmung_done:false,
             geschuetzter_von_doktor:None,
             priester_hat_geworfen: false, 
+            abstimmung_done:false,
+            //
+            votes: HashMap::new(),
 
         }
     }
@@ -182,7 +192,8 @@ impl Game {
         self.abstimmung_done=true;
         self.phase_change();}}*/
         self.tag_opfer = Some(name.to_string());
-        println!("(TAG) Dorf lyncht {}", name);
+        //println!("(TAG) Dorf lyncht {}", name);
+        log::info!("(TAG) Dorf lyncht {}", name);
         self.spieler_stirbt(name);
         self.phase_change();
     }
@@ -211,27 +222,33 @@ impl Game {
     pub fn spieler_stirbt(&mut self, verstorbener:&str){
         let player=self.players.iter_mut().find(|p| p.name == verstorbener);
         if player.is_none(){
-            println!("Spieler {}existiert nicht", verstorbener);
+            log::info!("Spieler {}existiert nicht", verstorbener);
+            //println!("Spieler {}existiert nicht", verstorbener);
             return;
         }
         let victim = player.unwrap();
         if !victim.lebend{
-            println!("spieler bereits tot.");
+            log::info!("spieler bereits tot.");
+            //println!("spieler bereits tot.");
             return;
         }
 
         victim.lebend=false;
+        log::info!("Spieler {} ist gestorben.", verstorbener);
         println!("Spieler {} ist gestorben.", verstorbener);
 
         if victim.rolle==Rolle::Jäger{
-            println!("{} war der Jäger und schießt nun.", verstorbener);
+            log::info!("{} war der Jäger und schießt nun.", verstorbener);
+            //println!("{} war der Jäger und schießt nun.", verstorbener);
             //brauche ziel vom frontend
 
             if let Some(ziel)= self.jaeger_ziel.clone(){
-                println!("Der Jäger erschießt {}.",ziel);
+                log::info!("Der Jäger erschießt {}.",ziel);
+                //println!("Der Jäger erschießt {}.",ziel);
                 self.spieler_stirbt(&ziel);
             }else {
-                println!("Der Jäger hat niemanden ausgewählt.");
+                log::info!("Der Jäger hat niemanden ausgewählt.");
+                //println!("Der Jäger hat niemanden ausgewählt.");
             }
         }
 
@@ -251,7 +268,8 @@ impl Game {
         if let Some (liebespartner_name)= liebespartner{
             if let Some(p) = self.players.iter().find(|p| p.name == liebespartner_name) {
                 if p.lebend{
-                    println!("{} stirbt vor Kummer.", liebespartner_name);
+                    log::info!("{} stirbt vor Kummer.", liebespartner_name);
+                    //println!("{} stirbt vor Kummer.", liebespartner_name);
                     self.spieler_stirbt(&liebespartner_name);
                 }
         }
@@ -259,7 +277,8 @@ impl Game {
         self.liebende_aktiv=false;
         
        if let Some(winner) = self.check_win() {
-        println!("SPIEL BEENDET: {:?} gewinnt!", winner);
+        log::info!("SPIEL BEENDET: {:?} gewinnt!", winner);
+        //println!("SPIEL BEENDET: {:?} gewinnt!", winner);
         } 
 
     }

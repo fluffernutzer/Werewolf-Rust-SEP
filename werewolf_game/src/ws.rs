@@ -49,7 +49,8 @@ pub enum ClientMessage<'a> {
     TagAction { direction: ActionForm },
     WerwolfAction { direction: ActionForm },
     SeherAction { direction: ActionForm },
-    HexenAktion{aktion:HexenAktion, extra_target:&'a str},
+    HexenAktion{direction: ActionForm, hexenAktion:HexenAktion, extra_target:&'a str},
+    AmorAktion {direction:ActionForm, target1: &'a str, target2:&'a str },
     ChatMessage { sender: String, message: String },
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -74,6 +75,7 @@ pub async fn ws_handler(
 async fn handle_socket(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
     let mut rx = state.tx.subscribe();
+
 
     tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
@@ -127,18 +129,19 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                         }
                         ClientMessage::TagAction { direction } => {
                             if let Phase::Tag = game.phase {
-                                game.tag_lynchen(&direction.target);
-                                //let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::DorfLyncht);
-                                game.runden +=1;
+                                //let update = game.tag_lynchen(&direction.target);
+                                let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::DorfLyncht);
+                                //game.runden +=1;
                             }
                         }
                         ClientMessage::WerwolfAction { direction } => {
                             if let Phase::WerwölfePhase = game.phase {
-                                let _ = match game.werwolf_toetet(&direction.actor,&direction.target){
+                                /*let _ = match game.werwolf_toetet(&direction.actor,&direction.target){
                                     Ok(()) => println!("Tötung ausgeführt"),
                                     Err(String) => println!("Fehler beim töten"),
                                 };
-                                game.runden +=1;
+                                game.runden +=1;*/
+                                let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::WerwolfFrisst);
                             }
                         }
                         ClientMessage::SeherAction { direction } => {
@@ -151,9 +154,13 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                                     game.runden +=1; 
                             }
                         }
-                        ClientMessage::HexenAktion { aktion, extra_target } => {
-                            //let _ = game.hexe_arbeitet(aktion, extra_target);
-                            println!("Hexe Aktuell noch falsch implementiert");
+                        ClientMessage::HexenAktion {direction, hexenAktion , extra_target } => {
+                            let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
+                            println!("An Hexe übergeben: {:?},{},{}",hexenAktion, &direction.actor ,extra_target);
+                            game.runden +=1;
+                        }
+                        ClientMessage::AmorAktion { direction, target1, target2 } =>{
+                            let _ = game.amor_waehlt(target1, target2);
                             game.runden +=1;
                         }
                         ClientMessage::ChatMessage { sender, message } => {
@@ -211,7 +218,7 @@ pub async fn send_game_state(state: &AppState) {
     });
 
     let message_str = serde_json::to_string(&message).expect("Fehler beim Serialisieren des GameState");
-    println!("Sende GameState: {}", message_str); // Debug-Ausgabe
+    //println!("Sende GameState: {}", message_str); // Debug-Ausgabe
     let _ = state.tx.send(message_str);
 
     if let Some(winner) = win && *game_started {
@@ -304,12 +311,14 @@ pub async fn show_user(
 }
 
 
-async fn handle_vote(
+ fn handle_vote(
     game: &mut Game,
     actor: &str,
     target: &str,
     action: ActionKind,
 ) -> Result<(), String> {
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.has_voted) {
+            return Err("Du hast schon abgestimmt".to_string())};
     if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.lebend) {
         player.has_voted = true;
     } else {
@@ -329,24 +338,36 @@ async fn handle_vote(
         })
         .map(|p| p.name.clone())
         .collect();
+    println!("erlaubte Stimmen:{:?}",eligible_player_names);
+    game.votes.entry(target.to_string()).or_default().push(actor.to_string());
+    println!("Aktuelle Stimmen: {:?}", game.votes);
+
 
     let all_voted = eligible_player_names.iter()
         .all(|name| game.players.iter().find(|p| p.name == *name).unwrap().has_voted);
 
     if all_voted {
-        match action {
-            ActionKind::DorfLyncht => game.tag_lynchen(target),
-            ActionKind::WerwolfFrisst => game.werwolf_toetet("Werwölfe", target)?,
-            ActionKind::HexeHext =>(),
-            ActionKind::SeherSieht =>(),
-        };
-
+         let final_target = game.votes.iter()
+        .max_by_key(|(_, voters)| voters.len())
+        .map(|(target, _)| target.clone());
+        if let Some(target) = final_target {
+            match action {
+                ActionKind::DorfLyncht => game.tag_lynchen(&target),
+                ActionKind::WerwolfFrisst => game.werwolf_toetet(&actor, &target)?,
+                ActionKind::HexeHext => (),
+                ActionKind::SeherSieht => (),
+        }};
+        
+        game.runden +=1;
+        game.votes.clear();
         for player in game.players.iter_mut() {
-            if eligible_player_names.contains(&player.name) {
-                player.has_voted = false;
+        if eligible_player_names.contains(&player.name) {
+            player.has_voted = false;
             }
         }
     }
 
     Ok(())
 }
+
+

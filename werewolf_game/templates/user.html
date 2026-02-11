@@ -89,33 +89,49 @@
       <div id="seher-result"></div>
     </div>
   {% elif rolle == "Hexe" %}
-    <div>
-      <h3>Hexen-Aktionen;</h3>
-      <p>Heilen:</p>
-      <select id="seher-target">
+  <div id="hexenAktionUI">
+    <h3>Hexen-Aktion</h3>
+    <select id="hexenAktion">
+      <option value="Heilen">Heilen</option>
+      <option value="Vergiften">Vergiften</option>
+      <option value="Nichts tun">Nichts tun</option>
+    </select>
+
+    <div id="opferAuswahl" style="display: none;">
+      <label for="opferId">Opfer auswählen:</label>
+      <select id="opferId">
         {% for player in players %}
           <option value="{{ player.name }}">{{ player.name }}</option>
         {% endfor %}
       </select>
-      <button onclick="sendAction('HexenAction', 'extra-target')">Heilen</button>
-      <div id="seher-result"></div>
-      <p>Töten:</p>
-      <select id="seher-target">
-        {% for player in players %}
-          <option value="{{ player.name }}">{{ player.name }}</option>
-        {% endfor %}
-      </select>
-      <button onclick="sendAction('HexenAction', 'extra-target')">Töten</button>
-      <div id="seher-result"></div>
-      <p>Nichts tun:</p>
-      <select id="seher-target">
-        {% for player in players %}
-          <option value="{{ player.name }}">{{ player.name }}</option>
-        {% endfor %}
-      </select>
-      <button onclick="sendAction('HexenAction', `Aussetzen`,'extra-target')">Aussetzen</button>
-      <div id="seher-result"></div>
     </div>
+
+    <input type="text" id="zielId" placeholder="Ziel-ID..." style="margin-top: 10px;">
+
+    <button onclick="sendAction('HexenAktion', 'zielId')" style="margin-top: 10px;">Aktion senden</button>
+  </div>
+  {% elif rolle == "Amor" %}
+  <div id="AmorAktionUI">
+    <h3>Amor-Aktion</h3>
+    <div id="Liebender1Auswahl">
+      <label for="Liebender1Id">Liebender1 auswählen:</label>
+      <select id="Liebender1Id">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="Liebender2Auswahl">
+      <label for="Liebender2Id">Liebender1 auswählen:</label>
+      <select id="Liebender2Id">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button onclick="sendAction('AmorAktion', 'EmptyTarget')" style="margin-top: 10px;">Liebespaar verzaubern</button>
+  </div>
   {% endif %}
 
   {% if phase == "Tag" %}
@@ -173,16 +189,42 @@
 
     function sendAction(type, targetId) {
       if (socket && socket.readyState === WebSocket.OPEN) {
-        const target = document.getElementById(targetId).value;
         const message = {
             type: type,
             data: {
                 direction: {
                     actor: "{{ username }}",
-                    target: target
                 }
             }
         };
+        if(type == "AmorAktion"){
+            const l1 = document.getElementById("Liebender1Id").value;
+            const l2 = document.getElementById("Liebender2Id").value;
+            message.data.target1 = l1;
+            message.data.target2 = l2;
+            const empty_target = "Empty_target"
+            message.data.direction.target = empty_target;
+        }
+
+        else if (type === "HexenAktion") {
+      const hexenAktion = document.getElementById("hexenAktion").value; 
+      message.data.hexenAktion = hexenAktion;
+      message.data.extra_target = "None";
+      const target = document.getElementById(targetId).value;
+      message.data.direction.target = target;
+
+      if (hexenAktion === "Vergiften") {
+        const extra_target = document.getElementById("opferId").value;
+        if (extra_target) {
+          message.data.extra_target = extra_target;
+        } 
+      }
+    }
+    else {
+      const target = document.getElementById(targetId).value;
+      message.data.direction.target = target;
+    }
+
         socket.send(JSON.stringify(message));
       } else {
         alert("Keine Verbindung zum Server!");
