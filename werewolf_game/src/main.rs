@@ -28,8 +28,6 @@ use uuid::Uuid;
 use webbrowser;
 
 use crate::{logic::{Game, HexenAktion, Phase}, ws::{send_game_state, ws_handler}};
-
-
 #[derive(Deserialize)]
 struct NameForm {
     username: String,
@@ -74,7 +72,6 @@ async fn main() {
     };
 
     let app = Router::new()
-
         .route("/", get(ws::index))
         .route("/:username", get(ws::show_user))
         .route("/ws", get(ws::ws_handler))
