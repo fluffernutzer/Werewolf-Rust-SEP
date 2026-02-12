@@ -334,6 +334,7 @@ pub async fn show_user(
                 Phase::HexePhase => p.rolle == Rolle::Hexe,
                 Phase::AmorPhase => p.rolle == Rolle::Amor,
                 Phase::DoktorPhase => p.rolle == Rolle::Doktor,
+                Phase::PriesterPhase => p.rolle == Rolle::Priester,
             }
         })
         .map(|p| p.name.clone())

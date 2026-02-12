@@ -67,6 +67,7 @@ pub struct Game {
     pub abstimmung_done:bool,
     //
     pub votes: HashMap<String,Vec<String>>,
+    //pub abstimmung_done:bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -118,6 +119,7 @@ impl Game {
             abstimmung_done:false,
             //
             votes: HashMap::new(),
+            //abstimmung_done:false,
 
         }
     }
