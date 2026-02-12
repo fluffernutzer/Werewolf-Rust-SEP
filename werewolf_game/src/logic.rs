@@ -16,12 +16,22 @@ pub enum Phase {
     DoktorPhase,
 }
 
+<<<<<<< HEAD
 #[derive(Debug, Clone,serde::Serialize,serde::Deserialize)]
 pub enum HexenAktion{
     Heilen,
     NichtsTun,
     Vergiften,
 }
+=======
+#[derive(Debug, Clone)]
+    pub enum HexenAktion{
+        Heilen,
+        NichtsTun,
+        Vergiften,
+    }
+
+>>>>>>> 5e6c1c9 (Doktor Funktion und Nachtauflösung)
 
 #[derive(Debug, Clone)]
 pub struct Spieler {
