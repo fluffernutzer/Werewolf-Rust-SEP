@@ -3,6 +3,8 @@ mod logic;
 mod roles;
 mod tag_nacht;
 mod ws;
+mod roles_logic;
+
 use axum::{
     Router,
     extract::{Form, Path, State},
