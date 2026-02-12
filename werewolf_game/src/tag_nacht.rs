@@ -6,7 +6,6 @@ use std::io;
 
 impl Game{
 
-
   pub fn has_role(&self, rolle: Rolle)->bool{
         self.players.iter().any(|p|p.rolle==rolle&&p.lebend)
     }
@@ -25,7 +24,10 @@ impl Game{
             } else if self.has_role(Rolle::Hexe){
                 self.phase=Phase::HexePhase;
                 return;
-            } else {
+            } else if self.has_role(Rolle::Doktor) {
+                self.phase=Phase::DoktorPhase;
+                return;
+            }else {
                 self.phase=Phase::Tag;
                 return;
             }
@@ -40,6 +42,9 @@ impl Game{
             } else if self.has_role(Rolle::Hexe){
                 self.phase=Phase::HexePhase;
                 return;
+            } else if self.has_role(Rolle::Doktor) {
+                self.phase=Phase::DoktorPhase;
+                return;
             } else {
                 self.phase=Phase::Tag;
                 return;
@@ -52,6 +57,9 @@ impl Game{
             } else if self.has_role(Rolle::Hexe){
                 self.phase=Phase::HexePhase;
                 return;
+            } else if self.has_role(Rolle::Doktor) {
+                self.phase=Phase::DoktorPhase;
+                return;
             } else {
                 self.phase=Phase::Tag;
                 return;
@@ -61,12 +69,25 @@ impl Game{
             if self.has_role(Rolle::Hexe){
                 self.phase=Phase::HexePhase;
                 return;
+            }else if self.has_role(Rolle::Doktor) {
+                self.phase=Phase::DoktorPhase;
+                return;
             } else {
                 self.phase=Phase::Tag;
                 return;
             }
         }
         if let Phase::HexePhase=self.phase{
+            if self.has_role(Rolle::Doktor){
+                self.phase=Phase::DoktorPhase;
+                return;
+            } else {
+                self.phase=Phase::Tag;
+                return;
+            }
+        }
+        if let Phase::DoktorPhase=self.phase{
+            self.nacht_aufloesung();
             self.phase=Phase::Tag;
             self.runden += 1;
             return;

@@ -9,7 +9,9 @@ pub enum Rolle {
     Hexe,
     Jäger,
     Amor,
+    Doktor,
 }
+
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Team{
@@ -27,6 +29,7 @@ pub fn team(&self)->Team{
         Rolle::Jäger=>Team::TeamDorf,
         Rolle::Amor=>Team::TeamDorf,
         Rolle::Dorfbewohner=>Team::TeamDorf,
+        Rolle::Doktor=>Team::TeamDorf,
     }
 }}
 
