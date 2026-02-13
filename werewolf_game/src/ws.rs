@@ -324,6 +324,7 @@ async fn handle_vote(
                 Phase::SeherPhase => p.rolle == Rolle::Seher,
                 Phase::HexePhase => p.rolle == Rolle::Hexe,
                 Phase::AmorPhase => p.rolle == Rolle::Amor,
+                Phase::DoktorPhase => p.rolle == Rolle::Doktor,
             }
         })
         .map(|p| p.name.clone())
