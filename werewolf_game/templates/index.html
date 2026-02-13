@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Werwolf – Spielstart</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      padding: 8px;
+      margin: 5px 0;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    input {
+      padding: 8px;
+      margin-right: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Werwolf – Spielstart</h1>
+
+
+
+  <form onsubmit="event.preventDefault(); addUser();">
+  <input type="text" id="username" placeholder="Dein Name" required>
+  <button type="submit">Name hinzufügen</button>
+</form>
+<img src="{{ qr_code }}" alt="QR-Code" />
+
+
+  <h2>Aktuelle Spieler:</h2>
+  <ul id="users">
+    {% for player in players %}
+      <li>
+        {{ player.name }}
+      {% if player.status %}
+        (lebendig)
+      {% else %}
+        (tot)
+      {% endif %}
+      <button onclick="setReady('{{ player.name }}', true)">Bereit</button>
+        </li>
+    {% endfor %}
+  </ul>
+
+  <div>
+    <strong>Aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
+  </div>
+
+  <script>
+    let socket;
+
+    function connectWebSocket() {
+      socket = new WebSocket(`ws://${window.location.host}/ws`);
+
+      socket.onopen = () => {
+        console.log("WebSocket verbunden!");
+      };
+
+      socket.onclose = () => {
+        console.log("WebSocket Verbindung verloren. Versuche neu zu verbinden...");
+        setTimeout(connectWebSocket, 1000);
+      };
+
+      socket.onerror = (error) => {
+        console.error("WebSocket-Fehler:", error);
+      };
+
+      socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.type === "GAME_STATE") {
+          const usersList = document.getElementById("users");
+          usersList.innerHTML = data.state.players
+            .map(p => `
+                <li>
+                ${p.name} (${p.rolle}) ${p.ready ? '✅' : '❌'}
+                ${!p.ready ? `<button onclick="setReady('${p.name}', true)">Bereit</button>` : ''}
+                </li>
+            `)
+            .join("");
+            document.getElementById("phase").textContent = data.state.phase;
+        } 
+      };
+    }
+
+    /*function addUser() {
+        const username = document.getElementById("username").value.trim();
+        if (!username) {
+            alert("Bitte gib einen Namen ein!");
+            return;
+        }
+
+        fetch("/add-user", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `username=${encodeURIComponent(username)}`,
+        })
+        .then(response => {
+            if (response.redirected) {
+            // Wenn der Server einen Redirect zurückgibt, lade die Seite neu
+            window.location.reload();
+        } else if (response.ok) {
+            // Falls kein Redirect, lade die Seite ebenfalls neu
+            window.location.reload();
+        } else {
+            alert("Fehler beim Hinzufügen des Spielers!");
+        }
+    })
+        .catch(error => {
+            console.error("Fehler:", error);
+            alert("Fehler beim Hinzufügen des Spielers!");
+        });
+        }*/
+
+ /*   function addUser() {
+    const username = document.getElementById("username").value.trim();
+    if (!username) {
+        alert("Bitte gib einen Namen ein!");
+        return;
+    }
+
+    // Sende den Benutzernamen als Teil der WebSocket-Nachricht
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "AddUser", data: { username: username } }));
+        document.getElementById("username").value = "";
+        //socket.send(JSON.stringify({ AddUser: username }));
+    } else {
+        alert("Keine Verbindung zum Server!");
+    }
+}*/
+//
+function addUser() {
+  const username = document.getElementById("username").value.trim();
+  if (!username) {
+    alert("Bitte gib einen Namen ein!");
+    return;
+  }
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: "AddUser", data: { username: username } }));
+    document.getElementById("username").value = "";
+    document.getElementById("ready-section").style.display = "block";
+  }
+}
+
+// Sende "Bereit"-Status an den Server
+function setReady(username, ready) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "ReadyStatus",
+      data: { username: username, ready: ready }
+    }));
+  }
+}
+//
+
+    function startGame() {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({type: "StartGame"}));
+      } else {
+        alert("Keine Verbindung zum Server!");
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", connectWebSocket);
+  </script>
+</body>
+</html>

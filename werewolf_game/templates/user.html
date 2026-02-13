@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Werwolf – {{ username }}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      padding: 8px;
+      margin: 5px 0;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    select, button {
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    #seher-result {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #e9e9e9;
+      border-radius: 4px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>{{ username }} ({{ rolle }})</h1>
+
+  <h2>Aktuelle Spieler:</h2>
+  <ul id="users">
+    {% for player in players %}
+      <li>
+        {{ player.name }}
+      {% if player.status %}
+        (lebendig)
+      {% else %}
+        (tot)
+      {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  <div>
+    <strong>Aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
+  </div>
+
+  {% if rolle == "Werwolf" %}
+    <div>
+      <h3>Werwolf-Aktion</h3>
+      <p>Wähle ein Opfer aus:</p>
+      <select id="werwolf-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('WerwolfAction', 'werwolf-target')">Töten</button>
+    </div>
+  {% elif rolle == "Seher" %}
+    <div>
+      <h3>Seher-Aktion</h3>
+      <p>Wähle einen Spieler, dessen Rolle du sehen möchtest:</p>
+      <select id="seher-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('SeherAction', 'seher-target')">Schauen</button>
+      <div id="seher-result"></div>
+    </div>
+  {% elif rolle == "Hexe" %}
+    <div>
+      <h3>Hexen-Aktionen;</h3>
+      <p>Heilen:</p>
+      <select id="seher-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('HexenAction', 'extra-target')">Heilen</button>
+      <div id="seher-result"></div>
+      <p>Töten:</p>
+      <select id="seher-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('HexenAction', 'extra-target')">Töten</button>
+      <div id="seher-result"></div>
+      <p>Nichts tun:</p>
+      <select id="seher-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('HexenAction', `Aussetzen`,'extra-target')">Aussetzen</button>
+      <div id="seher-result"></div>
+    </div>
+  {% endif %}
+
+  {% if phase == "Tag" %}
+    <div>
+      <h3>Tag-Aktion – Lynchen</h3>
+      <p>Wähle einen Spieler zum Lynchen:</p>
+      <select id="tag-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
+    </div>
+  {% endif %}
+
+  <script>
+    let socket;
+
+    function connectWebSocket() {
+      socket = new WebSocket(`ws://${window.location.host}/ws`);
+
+      socket.onopen = () => {
+        console.log("WebSocket verbunden!");
+      };
+
+      socket.onclose = () => {
+        console.log("WebSocket Verbindung verloren. Versuche neu zu verbinden...");
+        setTimeout(connectWebSocket, 1000);
+      };
+
+      socket.onerror = (error) => {
+        console.error("WebSocket-Fehler:", error);
+      };
+
+      socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.type === "GAME_STATE") {
+          const usersList = document.getElementById("users");
+          usersList.innerHTML = data.state.players
+            .map(p => `<li>${p.name} (${p.status ? 'lebendig' : 'tot'})</li>`)
+            .join("");
+          document.getElementById("phase").textContent = data.state.phase;
+
+          if (data.state.last_seher_result) {
+            const seherResultDiv = document.getElementById("seher-result");
+            seherResultDiv.textContent = data.state.last_seher_result;
+            seherResultDiv.style.display = "block";
+          }
+         } else if (data.type === "CHAT_MESSAGE") {
+            appendChatMessage(data.data.sender, data.data.message);
+        } else if (data.type === "WINNER") {
+    showWinnerPage(data.winner);}
+      };
+    }
+
+    function sendAction(type, targetId) {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        const target = document.getElementById(targetId).value;
+        const message = {
+            type: type,
+            data: {
+                direction: {
+                    actor: "{{ username }}",
+                    target: target
+                }
+            }
+        };
+        socket.send(JSON.stringify(message));
+      } else {
+        alert("Keine Verbindung zum Server!");
+      }
+    }
+
+    function sendChatMessage() {
+  const input = document.getElementById("chat-input");
+  const message = input.value.trim();
+  if (message && socket && socket.readyState === WebSocket.OPEN) {
+    const chatMessage = {
+      type: "ChatMessage",
+      data: {
+        sender: "{{ username }}",
+        message: message
+      }
+    };
+    socket.send(JSON.stringify(chatMessage));
+    input.value = "";
+  }
+}
+
+function appendChatMessage(sender, message) {
+  const chatMessages = document.getElementById("chat-messages");
+  chatMessages.innerHTML += `<p><strong>${sender}:</strong> ${message}</p>`;
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+
+    function showWinnerPage(winner) {
+  document.body.innerHTML = `
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+      <meta charset="utf-8">
+      <title>Werwolf – Sieger</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+          text-align: center;
+        }
+        h1 {
+          color: green;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Spiel beendet!</h1>
+      <p>Der Sieger ist: ${winner}</p>
+      <a href="/">Zurück zur Startseite</a>
+    </body>
+    </html>
+  `;
+}
+
+    document.addEventListener("DOMContentLoaded", connectWebSocket);
+    document.getElementById("chat-input").addEventListener("keypress", function(event) {
+  if (event.key === "Enter") {
+    sendChatMessage();
+  }
+});
+
+  </script>
+  <div id="chat-container">
+  <h3>Allgemeiner Chat</h3>
+  <div id="chat-messages" style="height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px;"></div>
+  <input type="text" id="chat-input" placeholder="Nachricht eingeben..." style="width: 70%; padding: 8px; margin-right: 5px;">
+  <button onclick="sendChatMessage()" style="padding: 8px 16px;">Senden</button>
+</div>
+</body>
+</html>
+
+
