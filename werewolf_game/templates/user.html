@@ -91,10 +91,10 @@
   {% elif rolle == "Hexe" %}
   <div id="hexenAktionUI">
     <h3>Hexen-Aktion</h3>
-    <select id="hexenAktion">
+    <select id="hexenAktion" onchange="toggleOpferAuswahl()">
       <option value="Heilen">Heilen</option>
       <option value="Vergiften">Vergiften</option>
-      <option value="Nichts tun">Nichts tun</option>
+      <option value="NichtsTun">Nichts tun</option>
     </select>
 
     <div id="opferAuswahl" style="display: none;">
@@ -106,7 +106,7 @@
       </select>
     </div>
 
-    <input type="text" id="zielId" placeholder="Ziel-ID..." style="margin-top: 10px;">
+    <input type="hidden" id="zielId" value="">
 
     <button onclick="sendAction('HexenAktion', 'zielId')" style="margin-top: 10px;">Aktion senden</button>
   </div>
@@ -132,6 +132,17 @@
 
     <button onclick="sendAction('AmorAktion', 'EmptyTarget')" style="margin-top: 10px;">Liebespaar verzaubern</button>
   </div>
+  {% elif rolle == "Doktor" %}
+    <div>
+      <h3>Doktor-Aktion</h3>
+      <p>Wähle einen Spieler, den du diese Nacht schützen möchtest:</p>
+      <select id="doktor-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('DoktorAction', 'doktor-target')">Beschützen</button>
+    </div>
   {% endif %}
 
   {% if phase == "Tag" %}
@@ -251,6 +262,23 @@ function appendChatMessage(sender, message) {
   const chatMessages = document.getElementById("chat-messages");
   chatMessages.innerHTML += `<p><strong>${sender}:</strong> ${message}</p>`;
   chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function toggleOpferAuswahl() {
+  const hexenAktion = document.getElementById("hexenAktion").value;
+  const opferAuswahl = document.getElementById("opferAuswahl");
+  if (hexenAktion === "Vergiften") {
+    opferAuswahl.style.display = "block";
+    updateZielId();
+  } else {
+    opferAuswahl.style.display = "none";
+    document.getElementById("zielId").value = "";
+  }
+}
+
+function updateZielId() {
+  const opferId = document.getElementById("opferId").value;
+  document.getElementById("zielId").value = opferId;
 }
 
 
