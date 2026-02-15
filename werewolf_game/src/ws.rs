@@ -51,6 +51,7 @@ pub enum ClientMessage<'a> {
     SeherAction { direction: ActionForm },
     HexenAktion{direction: ActionForm, hexenAktion:HexenAktion, extra_target:&'a str},
     AmorAktion {direction:ActionForm, target1: &'a str, target2:&'a str },
+    DoktorAction { direction: ActionForm },
     ChatMessage { sender: String, message: String },
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -161,6 +162,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                         }
                         ClientMessage::AmorAktion { direction, target1, target2 } =>{
                             let _ = game.amor_waehlt(target1, target2);
+                            game.runden +=1;
+                        }
+                        ClientMessage::DoktorAction { direction } => {
+                            let _ = game.doktor_schuetzt(&direction.target);
                             game.runden +=1;
                         }
                         ClientMessage::ChatMessage { sender, message } => {
@@ -276,6 +281,7 @@ pub async fn show_user(
                     Rolle::Hexe => "Hexe",
                     Rolle::Amor => "Amor",
                     Rolle::Jäger => "Jäger",
+                    Rolle::Doktor => "Doktor",
                     _ => "Dorfbewohner",
                 },
         None => "?",
@@ -292,6 +298,7 @@ pub async fn show_user(
                     Rolle::Hexe => "Hexe",
                     Rolle::Amor => "Amor",
                     Rolle::Jäger => "Jäger",
+                    Rolle::Doktor => "Doktor",
                     _ => "Dorfbewohner",
                 },
                 None => "?",
