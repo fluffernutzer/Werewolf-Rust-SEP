@@ -1,11 +1,10 @@
 use askama::Template;
 use axum::{
-    extract::{Path, State, ws::{Message, WebSocket, WebSocketUpgrade}},
-    response::{Html, Redirect, Response},
+    Json, extract::{Path, Query, State, ws::{Message, WebSocket, WebSocketUpgrade}}, response::{Html, Redirect, Response}
 };
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Value, json};
 use std::{os::macos::raw::stat, sync::Arc};
 use tokio::sync::{Mutex, broadcast};
 use urlencoding::encode;
@@ -32,6 +31,13 @@ struct UserTemplate<'a> {
     phase: String,
 }
 
+#[derive(Template)]
+#[template(path = "winner.html")]
+pub struct WinnerTemplate {
+    winner: String,
+}
+
+
 #[derive(Serialize)]
 struct PlayerTemplate<'a> {
     name: &'a str,
@@ -44,6 +50,7 @@ struct PlayerTemplate<'a> {
 
 pub enum ClientMessage<'a> {
     StartGame,
+    ResetGame,
     AddUser{ username: String },
     ReadyStatus { username: String, ready: bool },
     TagAction { direction: ActionForm },
@@ -97,12 +104,20 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                                     let safe_username = encode(&p.name);
                                     let url = format!("http://127.0.0.1:7878/{}", safe_username);
                                     let _ = webbrowser::open(&url);
-                                }
-                                
-                            }
-                            
+                                }  
+                            }                       
                         }
-                        
+                        ClientMessage::ResetGame => {
+                            println!("Starte zrücksetzen");
+                                //let mut game = state.game.lock().await;
+                                *game = Game::new();
+                                let mut game_started = state.game_started.lock().await;
+                                *game_started = false;
+                                let mut play_dev = state.play_dev.lock().await;
+                                play_dev.clear();
+                                println!("Zurüclsetzen beendet")
+
+                        }
                         ClientMessage::ReadyStatus { username, ready } => {
                             if let Some(player) = game.players.iter_mut().find(|p| p.name == username) {
                                 player.ready_state = ready;
@@ -223,7 +238,7 @@ pub async fn send_game_state(state: &AppState) {
     });
 
     let message_str = serde_json::to_string(&message).expect("Fehler beim Serialisieren des GameState");
-    //println!("Sende GameState: {}", message_str); // Debug-Ausgabe
+    println!("Sende GameState: {}", message_str); // Debug-Ausgabe
     let _ = state.tx.send(message_str);
 
     if let Some(winner) = win && *game_started {
@@ -234,8 +249,7 @@ pub async fn send_game_state(state: &AppState) {
         let winner_message_str = serde_json::to_string(&winner_message).expect("Fehler beim Serialisieren der Winner-Nachricht");
         println!("Sende Winner-Nachricht: {}", winner_message_str);
         let _ = state.tx.send(winner_message_str);
-    }
-}
+}}
 
 
 pub async fn index(State(state): State<AppState>) -> Html<String> {
@@ -379,3 +393,12 @@ pub async fn show_user(
 }
 
 
+#[derive(Deserialize)]
+pub struct WinnerParams {
+    winner: String,
+}
+
+pub async fn winner_page(Query(params): Query<WinnerParams>) -> Html<String> {
+    let template = WinnerTemplate { winner: params.winner };
+    Html(template.render().unwrap())
+}

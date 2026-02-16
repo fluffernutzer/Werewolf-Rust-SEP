@@ -68,6 +68,7 @@
 
   <div>
     <strong>Aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
+    <button onclick="reset_game()">Spiel zurückzusetzen</button>
   </div>
 
   <script>
@@ -105,6 +106,7 @@
         } 
       };
     }
+    
 
     /*function addUser() {
         const username = document.getElementById("username").value.trim();
@@ -167,7 +169,7 @@ function addUser() {
   }
 }
 
-// Sende "Bereit"-Status an den Server
+
 function setReady(username, ready) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
@@ -176,15 +178,22 @@ function setReady(username, ready) {
     }));
   }
 }
-//
 
-    function startGame() {
+function startGame() {
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({type: "StartGame"}));
       } else {
         alert("Keine Verbindung zum Server!");
       }
     }
+
+function reset_game(){
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({type: "ResetGame"}));
+      } else {
+        alert("Keine Verbindung zum Server!");
+      }
+}
 
     document.addEventListener("DOMContentLoaded", connectWebSocket);
   </script>
