@@ -13,6 +13,7 @@ pub enum Phase {
     WerwölfePhase,
     SeherPhase,
     HexePhase,
+    PriesterPhase,
     DoktorPhase,
 }
 
@@ -58,6 +59,7 @@ pub struct Game {
     pub hexe_done:bool,
     //pub abstimmung_done:bool,
     pub geschuetzter_von_doktor:Option<String>,
+    pub priester_hat_geworfen: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -105,6 +107,7 @@ impl Game {
             hexe_done:false,
             //abstimmung_done:false,
             geschuetzter_von_doktor:None,
+            priester_hat_geworfen: false, 
 
         }
     }
@@ -136,6 +139,7 @@ impl Game {
             (6,Rolle::Amor),
             (7,Rolle::Jäger),
             (8,Rolle::Doktor),
+            (8,Rolle::Priester),
         ];
 
         let mut roles=Vec::new();

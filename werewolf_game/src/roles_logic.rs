@@ -199,4 +199,53 @@ impl Game{
 
         self.geschuetzter_von_doktor=Some(geschuetzter_name.to_string());
         Ok(())
-    }}   
+    }
+
+    pub fn priester_wirft(&mut self, actor_name: &str, target_name: Option<&str>) -> Result<(), String> {
+        
+        if self.phase != Phase::PriesterPhase{
+            return Err("Der Priester ist gerade nicht dran.".into());
+        }
+
+        let priester_index = self.players
+            .iter()
+            .position(|p| p.rolle == Rolle::Priester && p.lebend)
+            .ok_or("Es gibt keinen lebenden Priester.".to_string())?;
+
+        if self.priester_hat_geworfen{
+            return Err("Der Priester hat bereits heiliges Wasser geworfen.".into());
+        }
+
+        if let Some(ziel) = target_name {
+            let ziel_index = self.players
+                .iter()
+                .position(|p| p.name == ziel)
+                .ok_or("Ziel existiert nicht.".to_string())?;
+            
+            if !self.players[ziel_index].lebend{
+                return Err("Das Ziel ist bereits tot.".into());
+            }
+            if self.players[priester_index].name == ziel{
+                return Err("Der Priester kann sich nicht selbst mit heiligen Wasser bewerfen.".into());
+            }
+
+            let ziel_team = self.players[ziel_index].team.clone();
+
+            if ziel_team == Team::TeamWerwolf{
+                println!("(NACHT) Priester wirft heiliges Wasser auf {} ! Es ist ein Werwolf!", ziel);
+                self.spieler_stirbt(ziel);
+            } else {
+                println!("(NACHT) Priester wirft heiliges Wasser auf {} ! Es ist leider kein Werwolf; der Priester stirbt.", ziel);
+                self.spieler_stirbt(actor_name);
+            }
+        } else {
+            println!("(NACHT) Priester tut nichts.");
+        }
+        
+        self.priester_hat_geworfen = true;
+
+        self.phase_change();
+        Ok(())
+     
+    }
+}   

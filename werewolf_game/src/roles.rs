@@ -10,6 +10,7 @@ pub enum Rolle {
     Jäger,
     Amor,
     Doktor,
+    Priester,
 }
 
 
@@ -30,6 +31,7 @@ pub fn team(&self)->Team{
         Rolle::Amor=>Team::TeamDorf,
         Rolle::Dorfbewohner=>Team::TeamDorf,
         Rolle::Doktor=>Team::TeamDorf,
+        Rolle::Priester=>Team::TeamDorf,
     }
 }}
 

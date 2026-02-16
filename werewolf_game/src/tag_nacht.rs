@@ -21,6 +21,9 @@ impl Game{
             } else if self.has_role(Rolle::Seher){
                 self.phase=Phase::SeherPhase;
                 return;
+            } else if self.has_role(Rolle::Priester){
+                self.phase=Phase::PriesterPhase;
+                return;
             } else if self.has_role(Rolle::Hexe){
                 self.phase=Phase::HexePhase;
                 return;
@@ -39,6 +42,9 @@ impl Game{
             } else if self.has_role(Rolle::Seher){
                 self.phase=Phase::SeherPhase;
                 return;
+            } else if self.has_role(Rolle::Priester){
+                self.phase=Phase::PriesterPhase;
+                return;
             } else if self.has_role(Rolle::Hexe){
                 self.phase=Phase::HexePhase;
                 return;
@@ -54,6 +60,9 @@ impl Game{
              if self.has_role(Rolle::Seher){
                 self.phase=Phase::SeherPhase;
                 return;
+            } else if self.has_role(Rolle::Priester){
+                self.phase=Phase::PriesterPhase;
+                return;
             } else if self.has_role(Rolle::Hexe){
                 self.phase=Phase::HexePhase;
                 return;
@@ -66,7 +75,10 @@ impl Game{
             }
         }
         if let Phase::SeherPhase=self.phase{
-            if self.has_role(Rolle::Hexe){
+            if self.has_role(Rolle::Priester){
+                self.phase=Phase::PriesterPhase;
+                return;
+            } else if self.has_role(Rolle::Hexe){
                 self.phase=Phase::HexePhase;
                 return;
             }else if self.has_role(Rolle::Doktor) {
@@ -76,6 +88,18 @@ impl Game{
                 self.phase=Phase::Tag;
                 return;
             }
+        }
+        if let Phase::PriesterPhase=self.phase{
+            if self.has_role(Rolle::Hexe){
+                self.phase=Phase::HexePhase;
+                return;
+            } else if self.has_role(Rolle::Doktor){
+                self.phase=Phase::DoktorPhase;
+                return;
+            } else{
+                self.phase=Phase::Tag;
+                return;
+            }   
         }
         if let Phase::HexePhase=self.phase{
             if self.has_role(Rolle::Doktor){
