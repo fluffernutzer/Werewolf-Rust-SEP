@@ -27,7 +27,7 @@ use image::Luma;
 use uuid::Uuid;
 use webbrowser;
 
-use crate::{logic::{Game, HexenAktion, Phase}, ws::{send_game_state, ws_handler}};
+use crate::{logic::{Game, HexenAktion, Phase}, ws::{send_game_state, winner_page, ws_handler}};
 #[derive(Deserialize)]
 struct NameForm {
     username: String,
@@ -75,6 +75,7 @@ async fn main() {
         .route("/", get(ws::index))
         .route("/:username", get(ws::show_user))
         .route("/ws", get(ws::ws_handler))
+        .route("/winner", get(winner_page))
         .with_state(state);
 
     log::info!("Server läuft auf http://127.0.0.1:7878");
