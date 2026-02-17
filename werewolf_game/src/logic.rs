@@ -1,9 +1,8 @@
+use crate::roles::Rolle;
+use crate::roles::Team;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use serde::Serialize;
-use crate::roles::Rolle;
-use crate::roles::Team;
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Phase {
@@ -15,8 +14,8 @@ pub enum Phase {
     HexePhase,
 }
 
-#[derive(Debug, Clone,serde::Serialize,serde::Deserialize)]
-pub enum HexenAktion{
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum HexenAktion {
     Heilen,
     NichtsTun,
     Vergiften,
@@ -28,8 +27,8 @@ pub struct Spieler {
     pub team: Team,
     pub rolle: Rolle,
     pub lebend: bool,
-    pub bereits_gesehen:bool,
-    //Für Websocket-Abstimmungen/Bereit zum Spielen: 
+    pub bereits_gesehen: bool,
+    //Für Websocket-Abstimmungen/Bereit zum Spielen:
     pub ready_state: bool,
     pub has_voted: bool,
 }
@@ -39,10 +38,11 @@ pub struct Game {
     pub players: Vec<Spieler>,
     pub phase: Phase,
     pub runden: u32,
-    pub heiltrank_genutzt:bool,
+    pub heiltrank_genutzt: bool,
     pub bereits_getoetet: bool,
     pub tag_opfer: Option<String>,
     pub nacht_opfer: Option<String>,
+<<<<<<< Updated upstream
     pub hexe_opfer:Option<String>,
     pub liebender_1:Option<String>,
     pub liebender_2:Option<String>,
@@ -55,6 +55,22 @@ pub struct Game {
     pub seher_done:bool,
     pub hexe_done:bool,
     pub abstimmung_done:bool,
+=======
+    pub hexe_opfer: Option<String>,
+    pub geheilter_von_hexe: Option<String>,
+    pub liebender_1: Option<String>,
+    pub liebender_2: Option<String>,
+    pub liebende_aktiv: bool,
+    pub amor_hat_gewaehlt: bool,
+    pub jaeger_ziel: Option<String>,
+    pub last_seher_result: Option<(String, Rolle)>,
+    //pub amor_done:bool,
+    //pub werwoelfe_done:bool,
+    //pub seher_done:bool,
+    pub hexe_done: bool,
+    //pub abstimmung_done:bool,
+    pub geschuetzter_von_doktor: Option<String>,
+>>>>>>> Stashed changes
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,19 +80,18 @@ pub enum Winner {
 }
 
 impl Spieler {
-    pub fn new(name: String, team: Team, rolle: Rolle, lebend:bool) -> Self {
+    pub fn new(name: String, team: Team, rolle: Rolle, lebend: bool) -> Self {
         Spieler {
             name,
             team: rolle.team(),
             rolle,
-            lebend:true,
-            bereits_gesehen:false,
-            ready_state:false,
-            has_voted:false,
+            lebend: true,
+            bereits_gesehen: false,
+            ready_state: false,
+            has_voted: false,
         }
     }
 }
-
 
 impl Game {
     pub fn new() -> Self {
@@ -87,6 +102,7 @@ impl Game {
             heiltrank_genutzt: false,
             bereits_getoetet: false,
             tag_opfer: None,
+<<<<<<< Updated upstream
             nacht_opfer:None,
             hexe_opfer:None,
             liebender_1:None,
@@ -101,56 +117,80 @@ impl Game {
             hexe_done:false,
             abstimmung_done:false,
 
+=======
+            nacht_opfer: None,
+            hexe_opfer: None,
+            geheilter_von_hexe: None,
+            liebender_1: None,
+            liebender_2: None,
+            liebende_aktiv: false,
+            amor_hat_gewaehlt: false,
+            jaeger_ziel: None,
+            last_seher_result: None,
+            //amor_done:false,
+            //werwoelfe_done:false,
+            //seher_done:false,
+            hexe_done: false,
+            //abstimmung_done:false,
+            geschuetzter_von_doktor: None,
+>>>>>>> Stashed changes
         }
     }
 
     pub fn add_player(&mut self, name: String) {
         self.players.push(Spieler {
             name,
-            team: Team::TeamDorf, //Platzhalter wird noch durchgemischt
+            team: Team::TeamDorf,       //Platzhalter wird noch durchgemischt
             rolle: Rolle::Dorfbewohner, //Platzhalter wird noch durchgemischt
             lebend: true,
-            bereits_gesehen:false,
-            ready_state:false,
-            has_voted:false,
+            bereits_gesehen: false,
+            ready_state: false,
+            has_voted: false,
         });
     }
 
-    pub fn verteile_rollen(&mut self)->Result<(),String>{
-        let mut rng= thread_rng();
+    pub fn verteile_rollen(&mut self) -> Result<(), String> {
+        let mut rng = thread_rng();
 
-        let anzahl_spieler=self.players.len();
-        if anzahl_spieler <3{
-            return Err ("Es müssen mindestens 3 Spieler vorhanden sein.".to_string());
+        let anzahl_spieler = self.players.len();
+        if anzahl_spieler < 3 {
+            return Err("Es müssen mindestens 3 Spieler vorhanden sein.".to_string());
         }
-        let anzahl_werwoelfe= anzahl_spieler/3;
+        let anzahl_werwoelfe = anzahl_spieler / 3;
         //kann noch erweitert werden für mehr rollen
-        let rollen_steps=vec![
+        let rollen_steps = vec![
             (4, Rolle::Seher),
+<<<<<<< Updated upstream
             (5,Rolle::Hexe),
             (6,Rolle::Amor),
             (7,Rolle::Jäger),
+=======
+            (5, Rolle::Hexe),
+            (6, Rolle::Amor),
+            (7, Rolle::Jäger),
+            (8, Rolle::Doktor),
+>>>>>>> Stashed changes
         ];
 
-        let mut roles=Vec::new();
+        let mut roles = Vec::new();
 
-        for _ in 0..anzahl_werwoelfe{
+        for _ in 0..anzahl_werwoelfe {
             roles.push(Rolle::Werwolf);
         }
-       for (min_anzahl,rolle)in rollen_steps{
-        if anzahl_spieler>=min_anzahl{
-            roles.push(rolle);
+        for (min_anzahl, rolle) in rollen_steps {
+            if anzahl_spieler >= min_anzahl {
+                roles.push(rolle);
+            }
         }
-       }
-       while roles.len()<anzahl_spieler{
-        roles.push(Rolle::Dorfbewohner);
-       }
+        while roles.len() < anzahl_spieler {
+            roles.push(Rolle::Dorfbewohner);
+        }
 
         roles.shuffle(&mut rng);
 
         for (player, role) in self.players.iter_mut().zip(roles.into_iter()) {
             player.rolle = role;
-            player.team=role.team();
+            player.team = role.team();
         }
         Ok(())
     }
@@ -379,12 +419,14 @@ pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
     }
 
     pub fn check_win(&self) -> Option<Winner> {
-        let lebende_werwoelfe = self.players
+        let lebende_werwoelfe = self
+            .players
             .iter()
             .filter(|p| p.lebend && p.team == Team::TeamWerwolf)
             .count();
 
-        let lebende_dorfspieler = self.players
+        let lebende_dorfspieler = self
+            .players
             .iter()
             .filter(|p| p.lebend && p.team != Team::TeamWerwolf)
             .count();
@@ -400,59 +442,102 @@ pub fn seher_schaut(&mut self, target_name: &str) -> Result<Rolle,String> {
         None
     }
 
+<<<<<<< Updated upstream
     fn spieler_stirbt(&mut self, verstorbener:&str){
         let player=self.players.iter_mut().find(|p| p.name == verstorbener);
         if player.is_none(){
+=======
+    pub fn spieler_stirbt(&mut self, verstorbener: &str) {
+        let player = self.players.iter_mut().find(|p| p.name == verstorbener);
+        if player.is_none() {
+>>>>>>> Stashed changes
             println!("Spieler {}existiert nicht", verstorbener);
             return;
         }
         let victim = player.unwrap();
-        if !victim.lebend{
+        if !victim.lebend {
             println!("spieler bereits tot.");
             return;
         }
 
-        victim.lebend=false;
+        victim.lebend = false;
         println!("Spieler {} ist gestorben.", verstorbener);
 
-        if victim.rolle==Rolle::Jäger{
+        if victim.rolle == Rolle::Jäger {
             println!("{} war der Jäger und schießt nun.", verstorbener);
             //brauche ziel vom frontend
 
-            if let Some(ziel)= self.jaeger_ziel.clone(){
-                println!("Der Jäger erschießt {}.",ziel);
+            if let Some(ziel) = self.jaeger_ziel.clone() {
+                println!("Der Jäger erschießt {}.", ziel);
                 self.spieler_stirbt(&ziel);
-            }else {
+            } else {
                 println!("Der Jäger hat niemanden ausgewählt.");
             }
         }
 
-        let ist_liebender_1 = self.liebender_1.as_ref().map(|s| s == verstorbener).unwrap_or(false); 
-        let ist_liebender_2 = self.liebender_2.as_ref().map(|s| s == verstorbener).unwrap_or(false);
-        
-        if !(ist_liebender_1||ist_liebender_2){
+        let ist_liebender_1 = self
+            .liebender_1
+            .as_ref()
+            .map(|s| s == verstorbener)
+            .unwrap_or(false);
+        let ist_liebender_2 = self
+            .liebender_2
+            .as_ref()
+            .map(|s| s == verstorbener)
+            .unwrap_or(false);
+
+        if !(ist_liebender_1 || ist_liebender_2) {
             return;
         }
 
-        let liebespartner = if ist_liebender_1{
+        let liebespartner = if ist_liebender_1 {
             self.liebender_2.clone()
         } else {
             self.liebender_1.clone()
         };
 
-        if let Some (liebespartner_name)= liebespartner{
+        if let Some(liebespartner_name) = liebespartner {
             if let Some(p) = self.players.iter().find(|p| p.name == liebespartner_name) {
-                if p.lebend{
+                if p.lebend {
                     println!("{} stirbt vor Kummer.", liebespartner_name);
                     self.spieler_stirbt(&liebespartner_name);
                 }
+            }
         }
-        }
-        self.liebende_aktiv=false;
-        
-       if let Some(winner) = self.check_win() {
-        println!("SPIEL BEENDET: {:?} gewinnt!", winner);
-        } 
+        self.liebende_aktiv = false;
 
+        if let Some(winner) = self.check_win() {
+            println!("SPIEL BEENDET: {:?} gewinnt!", winner);
+        }
     }
+<<<<<<< Updated upstream
+=======
+
+    pub fn nacht_aufloesung(&mut self) {
+        let opfer_name = self.nacht_opfer.clone();
+        if let Some(opfer) = opfer_name {
+            if self.geheilter_von_hexe.as_ref() == Some(&opfer) {
+                println!("{} wurde von der hexe geheilt.", opfer);
+            } else if self.geschuetzter_von_doktor.as_ref() == Some(&opfer) {
+                println!("{} wurde von dem Doktor beschützt.", opfer);
+            } else {
+                self.spieler_stirbt(&opfer);
+            }
+        }
+
+        let zusaetzliches_opfer_name = self.hexe_opfer.clone();
+        if let Some(zusaetzliches_opfer) = zusaetzliches_opfer_name {
+            if self.geschuetzter_von_doktor.as_ref() == Some(&zusaetzliches_opfer) {
+                println!("{} wurde von dem Doktor beschützt.", zusaetzliches_opfer);
+            } else {
+                self.spieler_stirbt(&zusaetzliches_opfer);
+            }
+        }
+
+        self.nacht_opfer = None;
+        self.hexe_opfer = None;
+        self.geheilter_von_hexe = None;
+        self.geschuetzter_von_doktor = None;
+    }
+>>>>>>> Stashed changes
 }

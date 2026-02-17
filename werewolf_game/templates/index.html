@@ -72,10 +72,10 @@
 
   <script>
     let socket;
-
+    let localPlayers = [];
     function connectWebSocket() {
       socket = new WebSocket(`ws://${window.location.host}/ws`);
-
+      
       socket.onopen = () => {
         console.log("WebSocket verbunden!");
       };
@@ -103,6 +103,14 @@
             .join("");
             document.getElementById("phase").textContent = data.state.phase;
         } 
+        if (data.type === "GAME_STARTED"){
+          for (let i=0; i< localPlayers.length; i++){
+            const username = localPlayers[i];
+             console.log("Lokaler Spieler startet:", username);
+            window.open(`/${encodeURIComponent(username)}`, "_blank");
+          }
+          
+        }
       };
     }
 
@@ -160,12 +168,16 @@ function addUser() {
     alert("Bitte gib einen Namen ein!");
     return;
   }
+  localPlayers.push(username);
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type: "AddUser", data: { username: username } }));
     document.getElementById("username").value = "";
     document.getElementById("ready-section").style.display = "block";
   }
+
+ 
 }
+
 
 // Sende "Bereit"-Status an den Server
 function setReady(username, ready) {
@@ -176,7 +188,7 @@ function setReady(username, ready) {
     }));
   }
 }
-//
+
 
     function startGame() {
       if (socket && socket.readyState === WebSocket.OPEN) {
@@ -187,6 +199,7 @@ function setReady(username, ready) {
     }
 
     document.addEventListener("DOMContentLoaded", connectWebSocket);
+    
   </script>
 </body>
 </html>
