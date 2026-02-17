@@ -56,11 +56,9 @@
 
 
         document.getElementById('newGameButton').addEventListener('click', () => {
-          // Sende eine Nachricht an den Server, um das Spiel zurückzusetzen
           if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: "reset_game" }));
           } else {
-            // Falls WebSocket nicht verfügbar, z.B. per fetch
             fetch('/reset_game', { method: 'POST' })
               .then(response => response.json())
               .then(data => {
