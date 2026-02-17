@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Spiel beitreten</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+        input, button { font-size: 18px; padding: 10px; margin: 10px; }
+    </style>
+</head>
+<body>
+
+<h1>Werwolf – Beitreten</h1>
+
+<div id="join-container">
+    <input type="text" id="username" placeholder="Dein Name">
+    <br>
+    <button onclick="joinGame()">Beitreten</button>
+</div>
+
+<div id="waiting-container" style="display:none;">
+    <h2>Du bist drin!</h2>
+    <p>Warte bis das Spiel startet…</p>
+</div>
+
+<script>
+let ws;
+
+function connect() {
+ 
+    ws = new WebSocket(`ws://${location.host}/ws`);
+
+    ws.onopen = () => console.log("WebSocket verbunden");
+
+    ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        console.log("Nachricht:", msg);
+
+        if (msg.type === "JOINED") {
+            localStorage.setItem("token", msg.token);
+
+            document.getElementById("join-container").style.display = "none";
+            document.getElementById("waiting-container").style.display = "block";
+        }
+
+        if (msg.type === "GAME_STARTED") {
+            const token = localStorage.getItem("token");
+            window.location.href = "/play/" + token;
+        }
+    };
+
+    ws.onclose = () => {
+        console.log("WS getrennt → reconnect…");
+        setTimeout(connect, 1000);
+    };
+
+    ws.onerror = (e) => console.error("WS Fehler", e);
+}
+
+function joinGame() {
+    const username = document.getElementById("username").value.trim();
+    if (!username) {
+        alert("Bitte Namen eingeben");
+        return;
+    }
+
+    ws.send(JSON.stringify({
+        type: "AddUser",
+        data: { username: username }
+    }));
+}
+
+connect();
+</script>
+
+</body>
+</html>
