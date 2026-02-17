@@ -143,6 +143,18 @@
       </select>
       <button onclick="sendAction('DoktorAction', 'doktor-target')">Beschützen</button>
     </div>
+    {% elif rolle == "Priester" %}
+    <div>
+      <h3>Priester-Aktion</h3>
+      <p>Wähle einen Spieler, den du mit heiligem Wasser bewerfen willst:</p>
+      <select id="priester-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('PriesterAction', 'priester-target')">Bewerfen</button>
+      <button onclick="sendAction('PriesterAction')">Nichts tun</button>
+    </div>
   {% endif %}
 
   {% if phase == "Tag" %}
@@ -200,6 +212,22 @@
 
     function sendAction(type, targetId) {
       if (socket && socket.readyState === WebSocket.OPEN) {
+        if (type === "PriesterAction") {
+            const message = {
+                type: type,
+                data: {
+                    actor: "{{ username }}",
+                    target: null 
+                }
+            };
+            if (targetId) {
+                const target = document.getElementById(targetId).value;
+                message.data.target = target;
+            }
+            socket.send(JSON.stringify(message));
+            return; 
+        }
+
         const message = {
             type: type,
             data: {

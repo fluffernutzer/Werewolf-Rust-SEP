@@ -59,6 +59,7 @@ pub enum ClientMessage<'a> {
     HexenAktion{direction: ActionForm, hexenAktion:HexenAktion, extra_target:&'a str},
     AmorAktion {direction:ActionForm, target1: &'a str, target2:&'a str },
     DoktorAction { direction: ActionForm },
+    PriesterAction { actor: &'a str, target: Option<&'a str> },
     ChatMessage { sender: String, message: String },
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -183,6 +184,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                             let _ = game.doktor_schuetzt(&direction.target);
                             game.runden +=1;
                         }
+                        ClientMessage::PriesterAction { actor, target} => {
+                            let _ = game.priester_wirft(&actor, target);
+                            game.runden +=1;
+                        }
                         ClientMessage::ChatMessage { sender, message } => {
                             let chat_message = json!({
                                 "type": "CHAT_MESSAGE",
@@ -238,7 +243,7 @@ pub async fn send_game_state(state: &AppState) {
     });
 
     let message_str = serde_json::to_string(&message).expect("Fehler beim Serialisieren des GameState");
-    println!("Sende GameState: {}", message_str); // Debug-Ausgabe
+    //println!("Sende GameState: {}", message_str); // Debug-Ausgabe
     let _ = state.tx.send(message_str);
 
     if let Some(winner) = win && *game_started {
@@ -296,6 +301,7 @@ pub async fn show_user(
                     Rolle::Amor => "Amor",
                     Rolle::Jäger => "Jäger",
                     Rolle::Doktor => "Doktor",
+                    Rolle::Priester => "Priester",
                     _ => "Dorfbewohner",
                 },
         None => "?",
@@ -313,6 +319,7 @@ pub async fn show_user(
                     Rolle::Amor => "Amor",
                     Rolle::Jäger => "Jäger",
                     Rolle::Doktor => "Doktor",
+                    Rolle::Priester => "Priester",
                     _ => "Dorfbewohner",
                 },
                 None => "?",

@@ -60,7 +60,7 @@ async fn main() {
     let logger = ClientLogger { tx: tx_1 };
     log::set_boxed_logger(Box::new(logger))
         .expect("Logger konnte nicht gesetzt werden");
-    log::set_max_level(LevelFilter::Info); // Log-Level festlegen
+    log::set_max_level(LevelFilter::Info); 
     
     let ip = local_ip().unwrap().to_string();
     let state = AppState {
@@ -75,7 +75,6 @@ async fn main() {
         .route("/", get(ws::index))
         .route("/:username", get(ws::show_user))
         .route("/ws", get(ws::ws_handler))
-        //.route("/winner", get(winner_page))
         .with_state(state);
 
     log::info!("Server läuft auf http://127.0.0.1:7878");
@@ -95,12 +94,12 @@ struct ClientLogger {
 
 impl log::Log for ClientLogger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        true // Alle Nachrichten loggen
+        true 
     }
 
     fn log(&self, record: &log::Record) {
         let message = format!("{}", record.args());
-        println!("{}", message); // Konsolenausgabe
+        println!("{}", message); 
         let chat_message = serde_json::json!({
             "type": "CHAT_MESSAGE",
             "data": {
@@ -110,7 +109,7 @@ impl log::Log for ClientLogger {
         });
         let chat_message_str = serde_json::to_string(&chat_message)
             .expect("Fehler beim Serialisieren der Chat-Nachricht");
-        let _ = self.tx.send(chat_message_str); // An Clients senden
+        let _ = self.tx.send(chat_message_str);
     }
 
     fn flush(&self) {}
