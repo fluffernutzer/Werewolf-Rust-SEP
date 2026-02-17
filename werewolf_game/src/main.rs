@@ -75,7 +75,7 @@ async fn main() {
         .route("/", get(ws::index))
         .route("/:username", get(ws::show_user))
         .route("/ws", get(ws::ws_handler))
-        .route("/winner", get(winner_page))
+        //.route("/winner", get(winner_page))
         .with_state(state);
 
     log::info!("Server läuft auf http://127.0.0.1:7878");
