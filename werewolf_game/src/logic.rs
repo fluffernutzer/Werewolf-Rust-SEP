@@ -312,3 +312,225 @@ impl Game {
         self.geschuetzter_von_doktor=None;
     }
 }
+
+
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    #[test]
+    fn test_new_game(){
+        let game=Game::new();
+
+        assert_eq!(game.players.len(), 0);
+        assert_eq!(game.phase, Phase::Tag);
+        assert_eq!(game.heiltrank_genutzt, false);
+        assert_eq!(game.bereits_getoetet, false);
+        assert_eq!(game.tag_opfer, None);
+        assert_eq!(game.nacht_opfer, None);
+        assert_eq!(game.hexe_opfer, None);
+        assert_eq!(game.geheilter_von_hexe, None);
+        assert_eq!(game.liebende_aktiv, false);  
+        assert_eq!(game.amor_hat_gewaehlt,false);
+        assert_eq!(game.jaeger_ziel,None);
+        assert_eq!(game.geschuetzter_von_doktor, None);
+        assert_eq!(game.priester_hat_geworfen,false); 
+         
+    }
+
+    #[test]
+    fn test_add_player(){
+        let mut game=Game::new();
+        
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        assert_eq!(game.players.len(),3);
+        
+    }
+
+    #[test]
+    fn test_verteile_rollen(){
+        let mut game=Game::new();
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        let result=game.verteile_rollen();
+        assert!(result.is_ok());
+
+        let anzahl_werwoelfe=game.players
+                                        .iter()
+                                        .filter(|p| matches!(p.rolle, Rolle::Werwolf))
+                                        .count();
+        assert_eq!(anzahl_werwoelfe,1);
+    }
+
+    #[test]
+    fn test_verteile_rollen_2(){
+        let mut game=Game::new();
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        
+
+        let result=game.verteile_rollen();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_rolle_von(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.verteile_rollen();
+
+        let rolle=game.rolle_von("Name1");
+
+        assert!(rolle.is_some());
+
+    }
+
+    #[test]
+    fn test_rolle_von2(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.verteile_rollen();
+
+        let rolle=game.rolle_von("Unbekannt");
+
+        assert!(rolle.is_none());
+        
+        }
+
+    #[test]
+    fn test_tag_lynchen(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.verteile_rollen().unwrap();
+
+        assert_eq!(game.phase, Phase::Tag);
+
+        game.tag_lynchen("Name1");
+
+        assert!(game.tag_opfer.is_some());
+        assert_eq!(game.tag_opfer.as_ref().unwrap(),"Name1");
+        assert!(!game.players[0].lebend);
+        assert_eq!(game.phase, Phase::WerwölfePhase);
+       
+      
+    }
+
+    #[test]
+    fn test_check_win_dorf(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.verteile_rollen().unwrap();
+
+        for p in game.players.iter_mut(){
+            if p.rolle==Rolle::Werwolf{
+                p.lebend=false;
+            }
+        }
+
+        let result=game.check_win();
+
+        assert_eq!(result, Some(Winner::Dorf));
+
+    }
+
+    #[test]
+    fn test_check_win_werwoelfe(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.verteile_rollen().unwrap();
+        for p in game.players.iter_mut(){
+            if p.rolle!=Rolle::Werwolf{
+                p.lebend=false;
+            }
+        }
+
+        let result=game.check_win();
+
+        assert_eq!(result, Some(Winner::Werwolf));
+
+    }
+
+    #[test]
+    fn test_liebespaar(){
+        let mut game=Game::new();
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.liebender_1=Some("Name2".into());
+        game.liebender_2=Some("Name3".into());
+        game.liebende_aktiv=true;
+
+        game.spieler_stirbt("Name2");
+
+        assert!(!game.players[1].lebend);
+        assert!(!game.players[2].lebend);
+
+    }
+     
+    #[test]
+    fn test_jaeger(){
+        let mut game=Game::new();
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.players[0].rolle=Rolle::Jäger;
+        game.jaeger_ziel=Some("Name3".into());
+        game.spieler_stirbt("Name1");
+
+        assert!(!game.players[2].lebend);
+    }
+
+    #[test]
+    fn test_spieler_stirbt_normaler_fall(){
+        let mut game=Game::new();
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.spieler_stirbt("Name1");
+
+        assert!(!game.players[0].lebend);
+    }
+
+    #[test]
+    fn spieler_stirbt_doppelt(){
+        let mut game=Game::new();
+        game.add_player("Name1".into());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.spieler_stirbt("Name1"); 
+        game.spieler_stirbt("Name1");
+
+        assert!(!game.players[0].lebend);
+    }
+
+}
