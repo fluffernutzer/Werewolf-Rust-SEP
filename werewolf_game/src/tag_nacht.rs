@@ -31,6 +31,7 @@ impl Game{
                 self.phase=Phase::DoktorPhase;
                 return;
             }else {
+                self.nacht_aufloesung();
                 self.phase=Phase::Tag;
                 return;
             }
@@ -52,6 +53,7 @@ impl Game{
                 self.phase=Phase::DoktorPhase;
                 return;
             } else {
+                self.nacht_aufloesung();
                 self.phase=Phase::Tag;
                 return;
             }
@@ -70,6 +72,7 @@ impl Game{
                 self.phase=Phase::DoktorPhase;
                 return;
             } else {
+                self.nacht_aufloesung();
                 self.phase=Phase::Tag;
                 return;
             }
@@ -85,6 +88,7 @@ impl Game{
                 self.phase=Phase::DoktorPhase;
                 return;
             } else {
+                self.nacht_aufloesung();
                 self.phase=Phase::Tag;
                 return;
             }
@@ -97,6 +101,7 @@ impl Game{
                 self.phase=Phase::DoktorPhase;
                 return;
             } else{
+                self.nacht_aufloesung();
                 self.phase=Phase::Tag;
                 return;
             }   
@@ -106,6 +111,7 @@ impl Game{
                 self.phase=Phase::DoktorPhase;
                 return;
             } else {
+                self.nacht_aufloesung();
                 self.phase=Phase::Tag;
                 return;
             }
