@@ -13,7 +13,6 @@ use crate::roles::Team;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Phase {
     Tag,
-    //Nacht,
     AmorPhase,
     WerwölfePhase,
     SeherPhase,
@@ -66,7 +65,7 @@ pub struct Game {
     pub geschuetzter_von_doktor:Option<String>,
     pub priester_hat_geworfen: bool,
     pub abstimmung_done:bool,
-    //
+    
     pub votes: HashMap<String,Vec<String>>,
     pub eligible_players: Vec<String>,
     pub current_votes: HashMap<String,Vec<String>>,
@@ -147,8 +146,11 @@ impl Game {
         if anzahl_spieler <3{
             return Err ("Es müssen mindestens 3 Spieler vorhanden sein.".to_string());
         }
+        if anzahl_spieler>15{
+            return Err ("Es dürfen maximal 16 Spieler mitspielen.".to_string());
+        }
         let anzahl_werwoelfe= anzahl_spieler/3;
-        //kann noch erweitert werden für mehr rollen
+        
         let rollen_steps=vec![
             (4, Rolle::Seher),
             (5,Rolle::Hexe),
@@ -189,20 +191,15 @@ impl Game {
     }
 
     pub fn tag_lynchen(&mut self, name: &str) {
-        /*if self.runden==1{
-            println!("(TAG) In Runde 1 wird nicht gelyncht.");
+        if self.runden==1{
+            log::info!("Runde 1: Niemand wird gelyncht.");
         self.phase_change();
         } else {
-        self.nacht_opfer=Some(name.to_string());
-        println!("(TAG) Dorf lyncht {}", name);
-        self.abstimmung_done=true;
-        self.phase_change();}}*/
         self.tag_opfer = Some(name.to_string());
-        //println!("(TAG) Dorf lyncht {}", name);
         log::info!("(TAG) Dorf lyncht {}", name);
         self.spieler_stirbt(name);
         self.phase_change();
-    }
+    }}
     pub fn check_win(&self) -> Option<Winner> {
         let lebende_spieler = self.players
             .iter()
