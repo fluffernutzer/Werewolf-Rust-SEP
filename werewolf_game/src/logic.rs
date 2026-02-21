@@ -444,7 +444,7 @@ mod tests{
         assert_eq!(game.tag_opfer.as_ref().unwrap(),"Name1");
         assert!(!game.players[0].lebend);
         assert_eq!(game.phase, Phase::WerwölfePhase);
-       
+       // Test failed manchmal, da mit verteile_rollen die Rollen zufällig zugeordnet werden. -> Falle Name1 werwolf ist, wird line 446 false, da kein werwolf mehr im Spiel ist. Einfach weglassen, da nicht wichtig für tag_lynchen? 
       
     }
 

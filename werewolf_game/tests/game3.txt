@@ -38,4 +38,4 @@ Werwolf W2 W1
 Werwolf W1 S
 Werwolf W2 S
 Seher S W2 
-Hexe vergiftet W1
+Hexe vergiftet H W1
