@@ -75,6 +75,11 @@
         {% endfor %}
       </select>
       <button onclick="sendAction('WerwolfAction', 'werwolf-target')">Töten</button>
+
+    <div id="voting-buttons-werwolf" style="margin-top: 20px; display: none;">
+    <h3>Aktuelle Abstimmung:</h3>
+    <div id="voting-options-werwolf"></div>
+  </div>
     </div>
   {% elif rolle == "Seher" %}
     <div>
@@ -108,7 +113,7 @@
 
     <input type="hidden" id="zielId" value="">
 
-    <button onclick="sendAction('HexenAktion', 'zielId')" style="margin-top: 10px;">Aktion senden</button>
+    <button onclick="sendAction('HexenAction', 'zielId')" style="margin-top: 10px;">Aktion senden</button>
   </div>
   {% elif rolle == "Amor" %}
   <div id="AmorAktionUI">
@@ -130,7 +135,7 @@
       </select>
     </div>
 
-    <button onclick="sendAction('AmorAktion', 'EmptyTarget')" style="margin-top: 10px;">Liebespaar verzaubern</button>
+    <button onclick="sendAction('AmorAction', 'EmptyTarget')" style="margin-top: 10px;">Liebespaar verzaubern</button>
   </div>
   {% elif rolle == "Doktor" %}
     <div>
@@ -142,6 +147,18 @@
         {% endfor %}
       </select>
       <button onclick="sendAction('DoktorAction', 'doktor-target')">Beschützen</button>
+    </div>
+    {% elif rolle == "Jäger" %}
+    <div>
+      <h3>Jäger-Aktion</h3>
+      <p>Wähle einen Spieler den du im fall deines Todes mit dir nehmen willst</p>
+      <select id="jaeger-target">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="sendAction('JaegerAction', 'jaeger-target')">Mit dir nehmen</button>
+      <button onclick="sendAction('JaegerAction')">Ziel zurücknehmen</button>
     </div>
     {% elif rolle == "Priester" %}
     <div>
@@ -158,16 +175,23 @@
   {% endif %}
 
   {% if phase == "Tag" %}
-    <div>
-      <h3>Tag-Aktion – Lynchen</h3>
-      <p>Wähle einen Spieler zum Lynchen:</p>
-      <select id="tag-target">
-        {% for player in players %}
-          <option value="{{ player.name }}">{{ player.name }}</option>
-        {% endfor %}
-      </select>
-      <button onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
-    </div>
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
+  <div style="flex: 1; margin-right: 20px;">
+    <h3>Tag-Aktion – Lynchen</h3>
+    <p>Wähle einen Spieler zum Lynchen:</p>
+    <select id="tag-target">
+      {% for player in players %}
+        <option value="{{ player.name }}">{{ player.name }}</option>
+      {% endfor %}
+    </select>
+    <button onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
+  </div>
+
+  <div id="voting-buttons" style="flex: 1; display: none;">
+    <h3>Aktuelle Abstimmung:</h3>
+    <div id="voting-options"></div>
+  </div>
+</div>
   {% endif %}
 
   <script>
@@ -191,12 +215,52 @@
 
       socket.onmessage = function(event) {
         const data = JSON.parse(event.data);
+        if (data.type === "GAME_RESET") {
+                alert("Das Spiel wurde zurückgesetzt. Bitte neu beitreten.")
+                socket.close();
+            }
         if (data.type === "GAME_STATE") {
           const usersList = document.getElementById("users");
           usersList.innerHTML = data.state.players
             .map(p => `<li>${p.name} (${p.status ? 'lebendig' : 'tot'})</li>`)
             .join("");
           document.getElementById("phase").textContent = data.state.phase;
+
+          const votingButtonsDiv = document.getElementById("voting-buttons");
+          const votingOptionsDiv = document.getElementById("voting-options");
+
+          if (data.state.ongoing_vote && data.state.phase === "Tag") {
+          votingButtonsDiv.style.display = "block";
+          votingOptionsDiv.innerHTML = Object.entries(data.state.current_votes)
+            .map(([target, voters]) => `
+            <button
+                    onclick="sendAction('TagAction', '${target}')"
+                    style="margin: 5px; padding: 8px 16px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                >
+                    ${target} (Stimmen: ${voters.length})
+                </button>
+            `)
+            .join("");
+            } else {
+            votingButtonsDiv.style.display = "none";
+            }
+            const votingButtonsWerwolf = document.getElementById("voting-buttons-werwolf");
+            const votingOptionsWerwolf = document.getElementById("voting-options-werwolf");
+            if (data.state.ongoing_vote && data.state.phase === "WerwölfePhase" && data.state.eligible_players.includes("{{ username }}")) {
+            votingButtonsWerwolf.style.display = "block";
+            votingOptionsWerwolf.innerHTML = Object.entries(data.state.current_votes)
+                .map(([target, voters]) => `
+                <button
+                    onclick="sendAction('WerwolfAction', '${target}')"
+                    style="margin: 5px; padding: 8px 16px; background-color: #F44336; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                >
+                    ${target} (Stimmen: ${voters.length})
+                </button>
+                `)
+                .join("");
+            } else if (votingButtonsWerwolf) {
+            votingButtonsWerwolf.style.display = "none";
+            }
 
           if (data.state.last_seher_result) {
             const seherResultDiv = document.getElementById("seher-result");
@@ -210,65 +274,74 @@
       };
     }
 
-    function sendAction(type, targetId) {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        if (type === "PriesterAction") {
-            const message = {
-                type: type,
-                data: {
-                    actor: "{{ username }}",
-                    target: null 
-                }
-            };
-            if (targetId) {
-                const target = document.getElementById(targetId).value;
-                message.data.target = target;
-            }
-            socket.send(JSON.stringify(message));
-            return; 
-        }
+function sendAction(type, targetOrId) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    alert("Keine Verbindung zum Server!");
+    return;
+  }
 
-        const message = {
-            type: type,
-            data: {
-                direction: {
-                    actor: "{{ username }}",
-                }
-            }
-        };
-        if(type == "AmorAktion"){
-            const l1 = document.getElementById("Liebender1Id").value;
-            const l2 = document.getElementById("Liebender2Id").value;
-            message.data.target1 = l1;
-            message.data.target2 = l2;
-            const empty_target = "Empty_target"
-            message.data.direction.target = empty_target;
-        }
+  let message;
 
-        else if (type === "HexenAktion") {
-      const hexenAktion = document.getElementById("hexenAktion").value; 
-      message.data.hexenAktion = hexenAktion;
-      message.data.extra_target = "None";
-      const target = document.getElementById(targetId).value;
-      message.data.direction.target = target;
-
-      if (hexenAktion === "Vergiften") {
-        const extra_target = document.getElementById("opferId").value;
-        if (extra_target) {
-          message.data.extra_target = extra_target;
-        } 
+  if (type === "AmorAction") {
+    message = {
+      type: type,
+      data: {
+        direction: { actor: "{{ username }}" },
+        target1: document.getElementById("Liebender1Id").value,
+        target2: document.getElementById("Liebender2Id").value,
       }
-    }
-    else {
-      const target = document.getElementById(targetId).value;
-      message.data.direction.target = target;
-    }
-
-        socket.send(JSON.stringify(message));
-      } else {
-        alert("Keine Verbindung zum Server!");
+    };
+  }
+  else if (type === "HexenAction") {
+    const hexenAktion = document.getElementById("hexenAktion").value;
+    const target = document.getElementById(targetOrId).value;
+    message = {
+      type: type,
+      data: {
+        direction: { actor: "{{ username }}", target: target },
+        hexenAktion: hexenAktion,
+        extra_target: hexenAktion === "Vergiften" ? document.getElementById("opferId").value : "None",
       }
-    }
+    };
+  }
+  else if (type === "PriesterAction") {
+    const target = targetOrId ? document.getElementById(targetOrId).value : null;
+    message = {
+      type: type,
+      data: {
+        actor: "{{ username }}",
+        target: target || undefined,
+      }
+    };
+  }
+  else if (type === "JaegerAction") {
+    const target = targetOrId ? document.getElementById(targetOrId).value : null;
+    message = {
+      type: type,
+      data: {
+        actor: "{{ username }}",
+        target: target || undefined,
+      }
+    };
+  }
+  else {
+    const target = typeof targetOrId === "string" && document.getElementById(targetOrId) === null
+      ? targetOrId
+      : document.getElementById(targetOrId).value;
+
+    message = {
+      type: type,
+      data: {
+        direction: {
+          actor: "{{ username }}",
+          target: target,
+        }
+      }
+    };
+  }
+
+  socket.send(JSON.stringify(message));
+}
 
     function sendChatMessage() {
   const input = document.getElementById("chat-input");

@@ -90,7 +90,11 @@ impl Game{
     }
 
 
-    pub fn hexe_arbeitet(&mut self, aktion:HexenAktion, actor_name:&str, extra_target:&str)->Result<(),String>{
+    pub fn hexe_arbeitet(&mut self, aktion:HexenAktion, actor_name:&str, extra_target:String)->Result<(),String>{
+        if self.phase!=Phase::HexePhase{
+            log::error!("Hexe ist nicht dran.");
+            return Err("Hexe ist nicht dran.".into());
+        }
         let hexe=self.players
                         .iter()
                         .find(|p| p.rolle==Rolle::Hexe)
@@ -153,7 +157,7 @@ impl Game{
     }
 
 
-    pub fn amor_waehlt (&mut self, target_1: &str, target_2: &str)->Result<(),String>{
+    pub fn amor_waehlt (&mut self, target_1: String, target_2: String)->Result<(),String>{
         if self.amor_hat_gewaehlt {
             log::error!("Amor kann nur einmal wählen.");
             return Err("Amor kann nur einmal wählen.".into());
@@ -229,7 +233,7 @@ impl Game{
         Ok(())
     }
 
-    pub fn priester_wirft(&mut self, actor_name: &str, target_name: Option<&str>) -> Result<(), String> {
+    pub fn priester_wirft(&mut self, actor_name: &str, target_name: Option<String>) -> Result<(), String> {
         
         if self.phase != Phase::PriesterPhase{
             log::error!("Der Priester ist gerade nicht dran.");
@@ -266,7 +270,7 @@ impl Game{
             if ziel_team == Team::TeamWerwolf{
                 log::info!("(NACHT) Priester wirft heiliges Wasser auf {} ! Es ist ein Werwolf!", ziel);
                 //println!("(NACHT) Priester wirft heiliges Wasser auf {} ! Es ist ein Werwolf!", ziel);
-                self.spieler_stirbt(ziel);
+                self.spieler_stirbt(&ziel);
             } else {
                 log::info!("(NACHT) Priester wirft heiliges Wasser auf {} ! Es ist leider kein Werwolf; der Priester stirbt.", ziel);
                 //println!("(NACHT) Priester wirft heiliges Wasser auf {} ! Es ist leider kein Werwolf; der Priester stirbt.", ziel);

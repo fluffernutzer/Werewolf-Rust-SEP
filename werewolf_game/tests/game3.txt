@@ -1,0 +1,41 @@
+StartGame
+TagAction W1 D1
+TagAction W2 D1
+TagAction D3 D1
+TagAction H D1
+TagAction Dr D1
+TagAction P D2
+TagAction D1 D2
+TagAction D2 D2
+TagAction S D2
+TagAction A D2
+TagAction W1 D2
+TagAction W2 D2
+TagAction D3 D1
+TagAction H D1
+TagAction Dr D1
+TagAction P D2
+TagAction D1 D2
+TagAction D2 D2
+TagAction S D2
+TagAction A D2
+Amor A D1 D3 
+Werwolf W1 D3
+Werwolf W2 S
+Werwolf W1 D3
+Werwolf W2 D3
+Seher S W1 
+Priester P S 
+Hexe vergiftet H Dr 
+Doktor Dr H
+TagAction W1 A
+TagAction S A
+TagAction A W1
+TagAction H W1
+TagAction W2 A
+Werwolf W1 S
+Werwolf W2 W1
+Werwolf W1 S
+Werwolf W2 S
+Seher S W2 
+Hexe vergiftet W1

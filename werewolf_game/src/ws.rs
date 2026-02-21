@@ -12,7 +12,7 @@ use serde_json::{Value,json};
 //use std::{os::macos::raw::stat, sync::Arc};
 use base64::{Engine as _, engine::general_purpose};
 use qrcode::QrCode;
-use std::{fs, sync::Arc};
+use std::{fs, os::macos::raw::stat, str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, broadcast, mpsc};
 use urlencoding::encode;
 use webbrowser;
@@ -54,10 +54,10 @@ struct PlayerTemplate<'a> {
     status: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug,Clone)]
 #[serde(tag = "type", content = "data")]
 
-pub enum ClientMessage<'a> {
+pub enum ClientMessage{
     StartGame,
     ResetGame,
     AddUser {
@@ -76,16 +76,18 @@ pub enum ClientMessage<'a> {
     SeherAction {
         direction: ActionForm,
     },
-    HexenAktion{direction: ActionForm, hexenAktion:HexenAktion, extra_target:&'a str},
-    AmorAktion {direction:ActionForm, target1: &'a str, target2:&'a str },
+    HexenAction{direction: ActionForm, hexenAktion:HexenAktion, extra_target: String},
+    AmorAction {direction:ActionForm, target1: String, target2: String },
     DoktorAction { direction: ActionForm },
-    PriesterAction { actor: &'a str, target: Option<&'a str> },
+    PriesterAction { actor: String, target: Option<String> },
+    JaegerAction { actor: String, target: Option<String> },
     ChatMessage {
         sender: String,
         message: String,
     },
 }
-#[derive(Serialize, Deserialize, Debug)]
+
+#[derive(Serialize, Deserialize, Debug,Clone)]
 pub struct ActionForm {
     pub actor: String,
     pub target: String,
@@ -130,7 +132,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     let recv_state = state.clone();
     let recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(text))) = receiver.next().await {
-            //println!("Client Message: {}", text);
+            //println!("Client Message: {}", text); 
 
             let Ok(client_message) = serde_json::from_str::<ClientMessage>(&text) else {
                 eprintln!("Ungültige Nachricht");
@@ -162,7 +164,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                                 *game_started = false;
                                 let mut play_dev = state.play_dev.lock().await;
                                 play_dev.clear();
-                                println!("Zurüclsetzen beendet")
+                                let _ = recv_state.tx.send(serde_json::json!({
+                                    "type": "GAME_RESET"
+                                }).to_string());
+                                println!("Zurüclsetzen beendet");
 
                         }
                 ClientMessage::ReadyStatus { username, ready } => {
@@ -184,6 +189,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                 }
 
                 ClientMessage::AddUser { username } => {
+                    if *state.game_started.lock().await {
+                        log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
+                        return //Err("Aktuell können keine Spieler mehr der Runde beitreten");
+                    } 
                     let token = uuid::Uuid::new_v4().to_string();
 
                     recv_state.play_dev.lock().await.push(PlayerDevice {
@@ -197,28 +206,20 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                         "type": "JOINED",
                         "token": token
                     }).to_string());
-
-                    //println!("Spieler hinzugefügt (privat geantwortet)");
                 }
 
                 ClientMessage::TagAction { direction } => {
                     if let Phase::Tag = game.phase {
-                        //let update = game.tag_lynchen(&direction.target);
-                                let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::DorfLyncht);
-                                //game.runden +=1;
+                                let _ = handle_vote(&mut game, direction.actor, direction.target, ActionKind::DorfLyncht).await;
                     }
                 }
 
                 ClientMessage::WerwolfAction { direction } => {
                     if let Phase::WerwölfePhase = game.phase {
-                        /*let _ = match game.werwolf_toetet(&direction.actor,&direction.target){
-                                    Ok(()) => println!("Tötung ausgeführt"),
-                                    Err(String) => println!("Fehler beim töten"),
-                                };
-                                
-                                game.runden +=1;*/
-                                let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::WerwolfFrisst);
-                    }
+                                let _ = handle_vote(& mut game, direction.actor, direction.target, ActionKind::WerwolfFrisst).await;
+                    } else {log::info!("Werwölfe gerade nicht dran!");
+                            //return
+                        }
                 }
 
                 ClientMessage::SeherAction { direction } => {
@@ -227,27 +228,27 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                             game.last_seher_result =
                                 Some((direction.target.clone(), rolle));
                         }
-                        game.runden += 1;
+                    } else {
+                        log::info!("Seher gerade nicht dran");
+                        return;
                     }
                 }
-
-                ClientMessage::HexenAktion {direction, hexenAktion , extra_target } => {
+                ClientMessage::HexenAction {direction, hexenAktion , extra_target } => {
                             let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
-                            println!("An Hexe übergeben: {:?},{},{}",hexenAktion, &direction.actor ,extra_target);
-                            game.runden +=1;
                         }
-                        ClientMessage::AmorAktion { direction, target1, target2 } =>{
+                ClientMessage::AmorAction { direction, target1, target2 } =>{
                             let _ = game.amor_waehlt(target1, target2);
-                            game.runden +=1;
                         }
-                        ClientMessage::DoktorAction { direction } => {
+                ClientMessage::DoktorAction { direction } => {
                             let _ = game.doktor_schuetzt(&direction.target);
-                            game.runden +=1;
                         }
-                        ClientMessage::PriesterAction { actor, target} => {
+                ClientMessage::PriesterAction { actor, target} => {
                             let _ = game.priester_wirft(&actor, target);
-                            game.runden +=1;
                         }
+                ClientMessage::JaegerAction {actor,target} => {
+                    game.jaeger_ziel = target;
+                }
+                     
 
                 ClientMessage::ChatMessage { sender, message } => {
                     let _ = recv_state.tx.send(serde_json::json!({
@@ -262,6 +263,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
            
             send_game_state(&recv_state).await;
         }
+        //Ok(())
 
         
     });
@@ -291,6 +293,9 @@ pub async fn send_game_state(state: &AppState) {
             "last_seher_result": game.last_seher_result
                 .as_ref()
                 .map(|(t, r)| format!("{} is {:?}", t, r)),
+            "eligible_players": game.eligible_players,
+            "current_votes": game.current_votes,
+            "ongoing_vote": game.ongoing_vote,
         }
     });
 
@@ -396,22 +401,26 @@ pub async fn show_user(
     Html(template.render().unwrap())
 }
 
+
 async fn handle_vote(
     game: &mut Game,
-    actor: &str,
-    target: &str,
+    actor: String,
+    target: String,
     action: ActionKind,
 ) -> Result<(), String> {
     if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.has_voted) {
-            return Err("Du hast schon abgestimmt".to_string())};
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.lebend){
+        return Err("Du hast schon abgestimmt".to_string());
+    }
+    if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.lebend) {
         player.has_voted = true;
-    } 
-    else {
+    } else {
         return Err("Spieler nicht gefunden oder nicht lebendig".to_string());
     }
 
-    let eligible_player_names: Vec<String> = game
+    game.votes.entry(target.to_string()).or_default().push(actor.to_string());
+    game.ongoing_vote = true;
+
+    game.eligible_players = game
         .players
         .iter()
         .filter(|p| {
@@ -421,47 +430,70 @@ async fn handle_vote(
                 Phase::SeherPhase => p.rolle == Rolle::Seher,
                 Phase::HexePhase => p.rolle == Rolle::Hexe,
                 Phase::AmorPhase => p.rolle == Rolle::Amor,
-                Phase::PriesterPhase=> p.rolle == Rolle::Priester,
-                Phase::DoktorPhase=>p.rolle==Rolle::Doktor,
+                Phase::PriesterPhase => p.rolle == Rolle::Priester,
+                Phase::DoktorPhase => p.rolle == Rolle::Doktor,
             }
         })
         .map(|p| p.name.clone())
         .collect();
-println!("erlaubte Stimmen:{:?}",eligible_player_names);
-    game.votes.entry(target.to_string()).or_default().push(actor.to_string());
-    println!("Aktuelle Stimmen: {:?}", game.votes);
-    let all_voted = eligible_player_names.iter().all(|name| {
+
+    game.current_votes = game.votes.clone();
+
+    let all_voted = game.eligible_players.iter().all(|name| {
         game.players
             .iter()
             .find(|p| p.name == *name)
-            .unwrap()
-            .has_voted
+            .map_or(false, |p| p.has_voted)
     });
 
     if all_voted {
-        let final_target = game.votes.iter()
-        .max_by_key(|(_, voters)| voters.len())
-        .map(|(target, _)| target.clone());
-        if let Some(target) = final_target {
+        let max_votes = game.votes.values().map(|v| v.len()).max().unwrap_or(0);
+        let candidates: Vec<String> = game
+            .votes
+            .iter()
+            .filter(|(_, voters)| voters.len() == max_votes)
+            .map(|(target, _)| target.clone())
+            .collect();
+
+        if candidates.len() > 1 {
+            game.votes.clear();
+            for player in game.players.iter_mut() {
+                if game.eligible_players.contains(&player.name) {
+                    player.has_voted = false;
+                }
+            }
+            game.current_votes = candidates
+                .into_iter()
+                .map(|c| (c, Vec::new()))
+                .collect();
+            return Ok(());
+        }
+
+        if let Some(final_target) = candidates.into_iter().next() {
             match action {
-                ActionKind::DorfLyncht => game.tag_lynchen(&target),
-                ActionKind::WerwolfFrisst => game.werwolf_toetet(&actor, &target)?,
+                ActionKind::WerwolfFrisst => match game.werwolf_toetet(&actor, &final_target){
+                    Ok(()) => (),
+                    Err(msg) => {log::info!("{}",msg)}
+                },
+                ActionKind::DorfLyncht => game.tag_lynchen(&final_target),
                 ActionKind::HexeHext => (),
                 ActionKind::SeherSieht => (),
-        }};
-        
-        game.runden +=1;
-        game.votes.clear();
-
-        for player in game.players.iter_mut() {
-            if eligible_player_names.contains(&player.name) {
-                player.has_voted = false;
             }
+            game.votes.clear();
+            for player in game.players.iter_mut() {
+                if game.eligible_players.contains(&player.name) {
+                    player.has_voted = false;
+                }
+            }
+            game.current_votes.clear();
+            game.ongoing_vote = false;
         }
     }
 
     Ok(())
 }
+
+
 #[derive(Deserialize)]
 pub struct WinnerParams {
     winner: String,
@@ -492,6 +524,8 @@ pub async fn play_page(
                 Rolle::Hexe => "Hexe",
                 Rolle::Amor => "Amor",
                 Rolle::Jäger => "Jäger",
+                Rolle::Priester => "Priester", // Hoffe OK? 
+                Rolle::Doktor => "Doktor", // Hoffe OK? 
                 _ => "Dorfbewohner",
             },
             None => "?",
@@ -509,6 +543,8 @@ pub async fn play_page(
                         Rolle::Hexe => "Hexe",
                         Rolle::Amor => "Amor",
                         Rolle::Jäger => "Jäger",
+                        Rolle::Priester => "Priester", // Hoffe OK? 
+                        Rolle::Doktor => "Doktor", // Hoffe OK? 
                         _ => "Dorfbewohner",
                     },
                     None => "?",
@@ -529,3 +565,286 @@ pub async fn play_page(
         Html("Token ungültig oder Spieler nicht gefunden!".to_string())
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+//Testing: 
+
+fn load_game(num: usize) -> Vec<ClientMessage> {
+    let path = format!("tests/game{num}.txt");
+    let content =
+        fs::read_to_string(&path).unwrap_or_else(|_| panic!("Could not read file: {}", &path));
+    let lines: Vec<&str> = content.lines().collect();
+    lines
+        .iter()
+        .map(|a| a.parse().expect("parse failed"))
+        .collect()
+}
+fn load_players(num: usize) -> Vec<Spieler> {
+    let path = format!("tests/players{num}.txt");
+    let content =
+        fs::read_to_string(&path).unwrap_or_else(|_| panic!("Could not read file: {}", &path));
+    let lines: Vec<&str> = content.lines().collect();
+    lines
+        .iter()
+        .map(|a| a.parse().expect("parse failed"))
+        .collect()
+}
+
+impl FromStr for ClientMessage {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split_whitespace().collect();
+
+        match parts.as_slice() {
+            ["StartGame"] => Ok(ClientMessage::StartGame),
+            ["ResetGame"] => Ok(ClientMessage::ResetGame),
+            ["AddUser", username] => Ok(ClientMessage::AddUser { username: username.to_string() }),
+            ["ReadyStatus", username, _, ready] => {
+                let ready = ready.parse::<bool>().map_err(|_| "Invalid bool for ready status")?;
+                Ok(ClientMessage::ReadyStatus { username: username.to_string(), ready })
+            }
+            ["TagAction", actor, target] => Ok(ClientMessage::TagAction {
+                direction: ActionForm { actor: actor.to_string(), target: target.to_string() },
+            }),
+            ["Werwolf", actor, target] => Ok(ClientMessage::WerwolfAction {
+                direction: ActionForm { actor: actor.to_string(), target: target.to_string() },
+            }),
+            ["Seher", actor, target] => Ok(ClientMessage::SeherAction {
+                direction: ActionForm { actor: actor.to_string(), target: target.to_string() },
+            }),
+            ["Hexe",hexenaktion, actor, extra_target] => {
+            let hexenaktion = match *hexenaktion {
+                "heilt" => HexenAktion::Heilen,
+                "vergiftet" => HexenAktion::Vergiften,
+                "tut_nichts" => HexenAktion::NichtsTun,
+                _ => return Err("ungültige Hexenaktion".to_string()),
+            };
+            Ok(ClientMessage::HexenAction {
+                direction: ActionForm { actor: actor.to_string(), target: "None".to_string() },
+                hexenAktion: hexenaktion,extra_target: extra_target.to_string(),
+            })},
+            ["Amor", actor, target1, target2] => Ok(ClientMessage::AmorAction {
+                direction: ActionForm { actor: actor.to_string(), target: target1.to_string() },
+                target1: target1.to_string(),
+                target2: target2.to_string(),
+            }),
+            ["Doktor", actor, target] => Ok(ClientMessage::DoktorAction {
+                direction: ActionForm { actor: actor.to_string(), target: target.to_string() },
+            }),
+            ["Priester", actor, target @ ..] => {
+                let target = if target.is_empty() {None} 
+                    else {Some(target[0].to_string())};
+                Ok(ClientMessage::PriesterAction {
+                    actor: actor.to_string(),
+                    target,
+                })},
+            ["Chat", sender, message @ ..] => {
+                let message = message.join(" ");
+                Ok(ClientMessage::ChatMessage { sender: sender.to_string(), message })
+            }
+            _ => Err(format!("Invalid action format: '{}'", s)),
+        }
+    }
+}
+
+
+async fn test_Client_message_ACTION_handling(
+    mut game: &mut Game,
+    state: &AppState,
+    client_message: ClientMessage,
+){
+    // Der MatchBlock muss stets genau dem der ws_handler-funktion(Aktionen) entsprechen! Ausnhame hexe: benötigt an sich kein Target in direction da nur Extra-target genutzt wird
+    match client_message {
+                ClientMessage::ResetGame => {
+                            println!("Starte zrücksetzen");
+                                //let mut game = state.game.lock().await;
+                                *game = Game::new();
+                                let mut game_started = state.game_started.lock().await;
+                                *game_started = false;
+                                let mut play_dev = state.play_dev.lock().await;
+                                play_dev.clear();
+                                println!("Zurüclsetzen beendet");
+
+                        }
+                ClientMessage::TagAction { direction } => {
+                    if let Phase::Tag = game.phase {
+                                let _ = handle_vote(&mut game, direction.actor, direction.target, ActionKind::DorfLyncht).await;
+                    }
+                }
+
+                ClientMessage::WerwolfAction { direction } => {
+                    if let Phase::WerwölfePhase = game.phase {
+                                let _ = handle_vote(& mut game, direction.actor, direction.target, ActionKind::WerwolfFrisst).await;
+                    } else {log::info!("Werwölfe gerade nicht dran!");
+                            return}
+                }
+
+                ClientMessage::SeherAction { direction } => {
+                    if let Phase::SeherPhase = game.phase {
+                        if let Ok(rolle) = game.seher_schaut(&direction.target) {
+                            game.last_seher_result =
+                                Some((direction.target.clone(), rolle));
+                        }
+                    } else {
+                        log::info!("Seher gerade nicht dran");
+                        return;
+                    }
+                }
+                ClientMessage::HexenAction {direction, hexenAktion , extra_target } => {
+                            let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
+                        }
+                ClientMessage::AmorAction { direction, target1, target2 } =>{
+                            let _ = game.amor_waehlt(target1, target2);
+                        }
+                ClientMessage::DoktorAction { direction } => {
+                            let _ = game.doktor_schuetzt(&direction.target);
+                        }
+                ClientMessage::PriesterAction { actor, target} => {
+                            let _ = game.priester_wirft(&actor, target);
+                        }
+                ClientMessage::JaegerAction {actor,target} => {
+                    game.jaeger_ziel = target;
+                }
+                        _ => {}
+            }
+
+}
+
+
+
+
+
+
+#[tokio::test]
+
+
+    async fn test_game_one_werwolf_winner  () {
+        let state = AppState {
+        tx: broadcast::channel(10).0,
+        game: Arc::new(Mutex::new(Game::new())),
+        game_started: Arc::new(Mutex::new(false)),
+        server_ip: "Test-IP".to_string(),
+        play_dev: Arc::new(Mutex::new(Vec::new())),
+    };
+        let spieler = load_players(10);
+        let spielablauf = load_game(10);
+        let mut game = state.game.lock().await;
+        game.players = spieler; 
+        for clientmessage in spielablauf {
+            let clientprint = clientmessage.clone();
+            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
+            println!("Clientmessage:{:?}",clientprint);
+        }
+        let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
+        println!("Remaining:{:?}",remaining);
+        let winner = game.check_win();
+        assert_eq!(Some(Winner::Werwolf),winner)
+    }
+#[tokio::test]
+        async fn test_game_two_village_winner  () {
+        let state = AppState {
+        tx: broadcast::channel(10).0,
+        game: Arc::new(Mutex::new(Game::new())),
+        game_started: Arc::new(Mutex::new(false)),
+        server_ip: "Test-IP".to_string(),
+        play_dev: Arc::new(Mutex::new(Vec::new())),
+    };
+        let spieler = load_players(10);
+        let spielablauf = load_game(20);
+        let mut game = state.game.lock().await;
+        game.players = spieler; 
+        for clientmessage in spielablauf {
+            let clientprint = clientmessage.clone();
+            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
+            println!("Clientmessage:{:?}",clientprint);
+        }
+        let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
+        println!("Remaining:{:?}",remaining);
+        let winner = game.check_win();
+        assert_eq!(Some(Winner::Dorf),winner)
+    }
+
+    #[tokio::test]
+        async fn test_game_two_wrong_timed_action  () {
+        let state = AppState {
+        tx: broadcast::channel(10).0,
+        game: Arc::new(Mutex::new(Game::new())),
+        game_started: Arc::new(Mutex::new(false)),
+        server_ip: "Test-IP".to_string(),
+        play_dev: Arc::new(Mutex::new(Vec::new())),
+    };
+        let spieler = load_players(10);
+        let spielablauf = load_game(21);
+        let mut game = state.game.lock().await;
+        game.players = spieler; 
+        for clientmessage in spielablauf {
+            let clientprint = clientmessage.clone();
+            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
+            println!("Clientmessage:{:?}",clientprint);
+        }
+        let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
+        println!("Remaining:{:?}",remaining);
+        let winner = game.check_win();
+        assert_eq!(Some(Winner::Dorf),winner)
+    }
+
+     #[tokio::test]
+        async fn test_game_reset_game  () { //Same game as test_game_two_village_winner but last action is reset-call -> winner gets deleted
+        let state = AppState {
+        tx: broadcast::channel(10).0,
+        game: Arc::new(Mutex::new(Game::new())),
+        game_started: Arc::new(Mutex::new(false)),
+        server_ip: "Test-IP".to_string(),
+        play_dev: Arc::new(Mutex::new(Vec::new())),
+    };
+        let spieler = load_players(10);
+        let spielablauf = load_game(211);
+        let mut game = state.game.lock().await;
+        game.players = spieler; 
+        for clientmessage in spielablauf {
+            let clientprint = clientmessage.clone();
+            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
+            println!("Clientmessage:{:?}",clientprint);
+        }
+        let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
+        println!("Remaining:{:?}",remaining);
+        let winner = game.check_win();
+        assert_eq!(None,winner)
+    }
+
+     #[tokio::test]
+        async fn critical_votes_game3  () { //Testing for handling votes of same amount. e.g 5 for A and 5 for B
+        let state = AppState {
+        tx: broadcast::channel(10).0,
+        game: Arc::new(Mutex::new(Game::new())),
+        game_started: Arc::new(Mutex::new(false)),
+        server_ip: "Test-IP".to_string(),
+        play_dev: Arc::new(Mutex::new(Vec::new())),
+    };
+        let spieler = load_players(10);
+        let spielablauf = load_game(3);
+        let mut game = state.game.lock().await;
+        game.players = spieler; 
+        for clientmessage in spielablauf {
+            let clientprint = clientmessage.clone();
+            println!("Clientmessage:{:?}",clientprint);
+            test_Client_message_ACTION_handling(&mut *game, &state, clientmessage).await;
+            println!("Phase:{:?}",game.phase);
+        }
+        let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
+        assert_eq!(["W1", "S", "H", "W2"],*remaining);
+        assert_eq!(Some(Winner::Werwolf),game.check_win());
+        assert_eq!(2,game.runden);
+    }
+

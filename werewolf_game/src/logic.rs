@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::str::FromStr;
 use futures::future::err;
 use log::info;
 use rand::seq::SliceRandom;
@@ -67,7 +68,9 @@ pub struct Game {
     pub abstimmung_done:bool,
     //
     pub votes: HashMap<String,Vec<String>>,
-    //pub abstimmung_done:bool,
+    pub eligible_players: Vec<String>,
+    pub current_votes: HashMap<String,Vec<String>>,
+    pub ongoing_vote :bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,8 +122,9 @@ impl Game {
             abstimmung_done:false,
             //
             votes: HashMap::new(),
-            //abstimmung_done:false,
-
+            eligible_players: Vec::new(),
+            current_votes: HashMap::new(),
+            ongoing_vote: false,
         }
     }
 
@@ -200,6 +204,15 @@ impl Game {
         self.phase_change();
     }
     pub fn check_win(&self) -> Option<Winner> {
+        let lebende_spieler = self.players
+            .iter()
+            .filter(|p| p.lebend)
+            .count();
+
+        let lebende_dorfspieler = self.players
+            .iter()
+            .filter(|p| p.lebend && p.team != Team::TeamWerwolf)
+            .count();
         let lebende_werwoelfe = self.players
             .iter()
             .filter(|p| p.lebend && p.team == Team::TeamWerwolf)
@@ -210,10 +223,12 @@ impl Game {
             .filter(|p| p.lebend && p.team != Team::TeamWerwolf)
             .count();
 
+        if lebende_spieler == 0 {
+            return None;
+        } else 
         if lebende_werwoelfe == 0 {
             return Some(Winner::Dorf);
-        }
-
+        } else 
         if lebende_werwoelfe >= lebende_dorfspieler {
             return Some(Winner::Werwolf);
         }
@@ -534,3 +549,54 @@ mod tests{
     }
 
 }
+// Für Testzwecke: 
+
+impl FromStr for Spieler {
+     type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split_whitespace().collect();
+        if parts.len() < 3 {
+            return Err("Invalid action format");
+        }
+        let name = parts[0].to_string();
+        let team = match parts[1] {
+            "TeamW" => Team::TeamWerwolf,
+            "TeamD" => Team::TeamDorf,
+            "TeamL" => Team::TeamLiebende,
+            _ => return Err("Ungültiges Team"),
+        };
+        let rolle = match parts[2]{
+            "D" => Rolle::Dorfbewohner,
+            "W" => Rolle::Werwolf,
+            "S" => Rolle::Seher,
+            "H" => Rolle::Hexe,
+            "J" => Rolle::Jäger,
+            "A" => Rolle::Amor,
+            "Dr" => Rolle::Doktor,
+            "P"=> Rolle::Priester,
+            _ => return Err("Ungültige Rolle"),
+        };
+        let lebend = match parts[3] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("lebend kein bool"),
+        };
+        let bereits_gesehen = match parts[4] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("bereits_gesehen kein bool"),
+        };
+        let ready_state = match parts[5] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("ready_state kein bool"),
+        };
+        let has_voted = match parts[6] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("has_voted kein bool"),
+        };
+        Ok(Spieler{name,team,rolle,lebend,bereits_gesehen,ready_state,has_voted})
+
+}}

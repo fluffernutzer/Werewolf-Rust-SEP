@@ -92,6 +92,12 @@
 
       socket.onmessage = function(event) {
         const data = JSON.parse(event.data);
+         // Bei Spiel-Reset: lokale Spielerliste leeren
+        if (data.type === "GAME_RESET") {
+            localPlayers = [];
+            //alert("Das Spiel wurde zurückgesetzt. Bitte neu beitreten.");
+            return;
+        }
         if (data.type === "GAME_STATE") {
           const usersList = document.getElementById("users");
           usersList.innerHTML = data.state.players

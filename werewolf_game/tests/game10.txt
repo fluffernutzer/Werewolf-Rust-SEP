@@ -1,0 +1,34 @@
+StartGame
+TagAction W1 S
+TagAction W2 S
+TagAction D3 S
+TagAction H S
+TagAction Dr S
+TagAction P S
+TagAction D1 S
+TagAction D2 S
+TagAction S P
+TagAction A S 
+Amor A D1 D2
+Werwolf W1 D1
+Werwolf W2 D1
+Seher S D3
+Priester P D2
+Hexe vergiftet H Dr
+Doktor Dr W1
+Hexe heilt H W2
+TagAction W1 H
+TagAction W2 H
+TagAction D3 H
+TagAction H H
+TagAction Dr H
+TagAction P H
+TagAction D1 H
+TagAction D2 H
+TagAction S H
+TagAction A H
+TagAction P H
+Werwolf W1 D3
+Werwolf W2 D3
+Werwolf W1 H
+Werwolf W2 H
