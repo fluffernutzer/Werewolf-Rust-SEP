@@ -399,11 +399,19 @@
       <h3>🌞 Tag der Abrechnung – Das Urteil der Dorfbewohner</h3>
       <p>Wähle einen Spieler zum Lynchen:</p>
       <select id="tag-target">
+<<<<<<< HEAD
         {% for player in players %}
           <option value="{{ player.name }}">{{ player.name }}</option>
         {% endfor %}
       </select>
       <button onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
+=======
+      {% for player in players %}
+        <option value="{{ player.name }}">{{ player.name }}</option>
+      {% endfor %}
+    </select>
+    <button onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
+>>>>>>> dd0164d (Added Tests for clientMessages and testgames. Fixed minor bugs and included new UI-features)
   </div>
 
   <div id="voting-buttons" style="flex: 1; display: none;">

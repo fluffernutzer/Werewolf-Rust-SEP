@@ -216,6 +216,10 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                     if game.players.iter().any(|p| p.name == username) {
                         return Err("Name existiert bereits".to_string());
                     }
+                    if *state.game_started.lock().await {
+                        log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
+                        //return //Err("Aktuell können keine Spieler mehr der Runde beitreten");
+                    } 
                     let token = uuid::Uuid::new_v4().to_string();
 
                     recv_state.play_dev.lock().await.push(PlayerDevice {
@@ -234,13 +238,13 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
 
                 ClientMessage::TagAction { direction } => {
                     if let Phase::Tag = game.phase {
-                                let _ = handle_vote(&mut game, &direction.actor, &direction.target, ActionKind::DorfLyncht).await;
+                                let _ = handle_vote(&mut game, direction.actor, direction.target, ActionKind::DorfLyncht).await;
                     }
                 }
 
                 ClientMessage::WerwolfAction { direction } => {
                     if let Phase::WerwölfePhase = game.phase {
-                                let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::WerwolfFrisst).await;
+                                let _ = handle_vote(& mut game, direction.actor, direction.target, ActionKind::WerwolfFrisst).await;
                     } else {log::info!("Werwölfe gerade nicht dran!");
                             //return
                         }
@@ -413,7 +417,13 @@ pub async fn show_user(Path(username): Path<String>,State(state): State<AppState
     Html(template.render().unwrap())
 }
 
-async fn handle_vote(game: &mut Game,actor: &str,target: &str,action: ActionKind ) -> Result<(), String> {
+
+async fn handle_vote(
+    game: &mut Game,
+    actor: String,
+    target: String,
+    action: ActionKind,
+) -> Result<(), String> {
     if let Some (_player)= game.players.iter_mut().find(|p| p.name == target){
         if let Some(_player) = game.players.iter_mut().find(|p| p.name == actor && p.has_voted) {
                 return Err("Du hast schon abgestimmt".to_string())};
@@ -687,13 +697,13 @@ async fn test_Client_message_ACTION_handling(
                         }
                 ClientMessage::TagAction { direction } => {
                     if let Phase::Tag = game.phase {
-                                let _ = handle_vote(&mut game, &direction.actor, &direction.target, ActionKind::DorfLyncht).await;
+                                let _ = handle_vote(&mut game, direction.actor, direction.target, ActionKind::DorfLyncht).await;
                     }
                 }
 
                 ClientMessage::WerwolfAction { direction } => {
                     if let Phase::WerwölfePhase = game.phase {
-                                let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::WerwolfFrisst).await;
+                                let _ = handle_vote(& mut game, direction.actor, direction.target, ActionKind::WerwolfFrisst).await;
                     } else {log::info!("Werwölfe gerade nicht dran!");
                             return}
                 }
@@ -892,7 +902,7 @@ mod tests{
     async fn not_existing_player_gets_lynched(){
         let mut game = Game::new();
         game.add_player("Nutzer".into());
-        let result = handle_vote(&mut game,"Nutzer", "NichtNutzer", ActionKind::DorfLyncht).await;
+        let result = handle_vote(&mut game,"Nutzer".to_string(), "NichtNutzer".to_string(), ActionKind::DorfLyncht).await;
 
         assert_eq!(result,Err("Spieler nicht gefunden oder nicht lebendig".to_string()));
     }
@@ -902,7 +912,7 @@ mod tests{
     async fn not_existing_player_cannot_vote(){
         let mut game = Game::new();
         game.add_player("Nutzer".into());
-        let result = handle_vote(&mut game,"NichtNutzer", "Nutzer", ActionKind::DorfLyncht).await;
+        let result = handle_vote(&mut game,"NichtNutzer".to_string(), "Nutzer".to_string(), ActionKind::DorfLyncht).await;
 
         assert_eq!(result,Err("Spieler nicht gefunden oder nicht lebendig".to_string()));
     }
@@ -913,8 +923,8 @@ mod tests{
         let mut game = Game::new();
         game.add_player("Nutzer1".into());
         game.add_player("Nutzer2".into());
-        let _ = handle_vote(&mut game,"Nutzer1", "Nutzer2", ActionKind::DorfLyncht).await;
-        let result = handle_vote(&mut game,"Nutzer1", "Nutzer2", ActionKind::DorfLyncht).await;
+        let _ = handle_vote(&mut game,"Nutzer1".to_string(), "Nutzer2".to_string(), ActionKind::DorfLyncht).await;
+        let result = handle_vote(&mut game,"Nutzer1".to_string(), "Nutzer2".to_string(), ActionKind::DorfLyncht).await;
 
         assert_eq!(result,Err("Du hast schon abgestimmt".to_string()));
     }
@@ -925,7 +935,7 @@ mod tests{
         let mut game = Game::new();
         game.add_player("Nutzer".into());
         let before = game.clone();
-        let _ = handle_vote(&mut game,"Nutzer", "NichtNutzer", ActionKind::DorfLyncht).await;
+        let _ = handle_vote(&mut game,"Nutzer".to_string(), "NichtNutzer".to_string(), ActionKind::DorfLyncht).await;
 
         assert_eq!(game, before);
     }

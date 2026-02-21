@@ -871,3 +871,5 @@ impl FromStr for Spieler {
         assert_eq!(game.check_win(), Some(Winner::Liebende));
     }
 
+
+
