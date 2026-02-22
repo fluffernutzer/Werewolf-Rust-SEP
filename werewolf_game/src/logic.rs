@@ -9,7 +9,6 @@ use std::collections::HashMap;
 ////use futures::future::err;
 ////use log::info;
 use rand::seq::SliceRandom;
-use rand::rng;
 //use serde::Serialize;
 use rand::rng;
 //use serde::Serialize;
@@ -35,7 +34,7 @@ pub enum HexenAktion{
     Vergiften,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Spieler {
     pub name: String,
@@ -48,7 +47,6 @@ pub struct Spieler {
     pub has_voted: bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Game {
     pub players: Vec<Spieler>,
@@ -151,7 +149,7 @@ impl Game {
     }
 
     pub fn verteile_rollen(&mut self)->Result<(),String>{
-        let mut rng= thread_rng();
+        let mut rng= rng();
 
         let anzahl_spieler=self.players.len();
         if anzahl_spieler <3{
@@ -399,7 +397,7 @@ mod tests{
         game.add_player("Name2".to_string());
         game.add_player("Name3".to_string());
 
-        game.verteile_rollen();
+        let _ = game.verteile_rollen();
 
         let rolle=game.rolle_von("Name1");
 
@@ -415,7 +413,7 @@ mod tests{
         game.add_player("Name2".to_string());
         game.add_player("Name3".to_string());
 
-        game.verteile_rollen();
+        let _ = game.verteile_rollen();
 
         let rolle=game.rolle_von("Unbekannt");
 
