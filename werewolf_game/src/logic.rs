@@ -4,8 +4,8 @@ use std::str::FromStr;
 use futures::future::err;
 use log::info;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
-use serde::Serialize;
+use rand::rng;
+//use serde::Serialize;
 use crate::roles::Rolle;
 use crate::roles::Team;
 
@@ -28,7 +28,7 @@ pub enum HexenAktion{
     Vergiften,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Spieler {
     pub name: String,
     pub team: Team,
@@ -40,7 +40,7 @@ pub struct Spieler {
     pub has_voted: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Game {
     pub players: Vec<Spieler>,
     pub phase: Phase,
@@ -60,11 +60,12 @@ pub struct Game {
     //pub amor_done:bool,
     //pub werwoelfe_done:bool,
     //pub seher_done:bool,
-    pub hexe_done:bool,
+    //pub hexe_done:bool,
     //pub abstimmung_done:bool,
     pub geschuetzter_von_doktor:Option<String>,
     pub priester_hat_geworfen: bool,
-    pub abstimmung_done:bool,
+    //pub abstimmung_done:bool,
+    //pub abstimmung_done:bool,
     
     pub votes: HashMap<String,Vec<String>>,
     pub eligible_players: Vec<String>,
@@ -78,8 +79,8 @@ pub enum Winner {
     Werwolf,
 }
 
-impl Spieler {
-    pub fn new(name: String, team: Team, rolle: Rolle, lebend:bool) -> Self {
+/*impl Spieler {
+    pub fn new(name: String, _team: Team, rolle: Rolle, _lebend:bool) -> Self {
         Spieler {
             name,
             team: rolle.team(),
@@ -91,6 +92,7 @@ impl Spieler {
         }
     }
 }
+}*/
 
 
 impl Game {
@@ -114,11 +116,11 @@ impl Game {
             //amor_done:false,
             //werwoelfe_done:false,
             //seher_done:false,
-            hexe_done:false,
+            //hexe_done:false,
             //abstimmung_done:false,
             geschuetzter_von_doktor:None,
             priester_hat_geworfen: false, 
-            abstimmung_done:false,
+            //abstimmung_done:false,
             //
             votes: HashMap::new(),
             eligible_players: Vec::new(),
