@@ -6,35 +6,35 @@ mod tag_nacht;
 mod ws;
 use axum::{
     Router,
-    extract::{Form, Path, State},
-    response::{Html, Json, Redirect},
-    routing::{get, post},
+    //extract::{Form, Path, State},
+    //response::{Html, Json, Redirect},
+    routing::{get},
 };
-use image::Luma;
+//use image::Luma;
 use local_ip_address::local_ip;
 use log::LevelFilter;
 use qrcode::QrCode;
-use serde::Deserialize;
+//use serde::Deserialize;
 use std::sync::Arc;
 use tokio::{
-    fs,
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
+    //fs,
+    //io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener},
     sync::{Mutex, broadcast},
 };
-use urlencoding::encode;
-use uuid::Uuid;
-use webbrowser;
+//use urlencoding::encode;
+//use uuid::Uuid;
+//use webbrowser;
 
 use crate::{
     logic::{Game, Phase},
-    ws::{send_game_state, ws_handler},
+    //ws::{send_game_state, ws_handler},
 };
 
-#[derive(Deserialize)]
+/*#[derive(Deserialize)]
 struct NameForm {
     username: String,
-}
+}*/
 struct PlayerDevice {
     name: String,
     token: String,
@@ -47,12 +47,12 @@ struct AppState {
     play_dev: Arc<Mutex<Vec<PlayerDevice>>>,
     tx: broadcast::Sender<String>,
 }
-#[derive(Deserialize)]
-struct ActionForm {
+//#[derive(Deserialize)]
+/*struct ActionForm {
     actor: String,
     action_kind: String,
     target: String,
-}
+}*/
 
 #[tokio::main]
 

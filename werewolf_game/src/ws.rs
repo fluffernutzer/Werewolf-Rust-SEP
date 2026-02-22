@@ -1,14 +1,14 @@
 use askama::Template;
-use axum::{Json,
+use axum::{
     extract::{
-        Path, State,Query,
+        Path, State,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
-    response::{Html, Redirect, Response},
+    response::{Html, Response},
 };
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value,json};
+use serde_json::{json};
 //use std::{os::macos::raw::stat, sync::Arc};
 use base64::{Engine as _, engine::general_purpose};
 use qrcode::QrCode;
@@ -30,11 +30,11 @@ struct IndexTemplate<'a> {
     phase: String,
     qr_code: String,
 }
-#[derive(Template)]
+/*#[derive(Template)]
 #[template(path = "winner.html")]
 pub struct WinnerTemplate {
     winner: String,
-}
+}*/
 #[derive(Template)]
 #[template(path = "user.html")]
 struct UserTemplate<'a> {
@@ -96,8 +96,8 @@ pub struct ActionForm {
 pub enum ActionKind {
     DorfLyncht,
     WerwolfFrisst,
-    SeherSieht,
-    HexeHext,
+    //SeherSieht,
+    //HexeHext,
 }
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
@@ -139,9 +139,29 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                 continue;
             };
 
-            let mut game = recv_state.game.lock().await;
+            if let Err(e) = handle_message(&recv_state, client_message, &client_tx).await {
+                eprintln!("Fehler: {e}");
+            }
+            let game = recv_state.game.lock().await;
 
-            match client_message {
+            
+
+            drop(game);
+
+           
+            send_game_state(&recv_state).await;
+        }
+
+        
+    });
+
+    let _ = tokio::join!(send_task, recv_task);
+}
+pub async fn handle_message( state: &AppState,client_message: ClientMessage,client_tx: &mpsc::UnboundedSender<String>) -> Result<(), String> {
+    let mut game = state.game.lock().await;
+    let recv_state = state.clone();
+    
+    match client_message {
 
                 ClientMessage::StartGame => {
                     if !*recv_state.game_started.lock().await {
@@ -169,7 +189,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                                 }).to_string());
                                 println!("Zurüclsetzen beendet");
 
-                        }
+                }
                 ClientMessage::ReadyStatus { username, ready } => {
                     if let Some(player) = game.players.iter_mut().find(|p| p.name == username) {
                         player.ready_state = ready;
@@ -191,17 +211,21 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                 ClientMessage::AddUser { username } => {
                     if *state.game_started.lock().await {
                         log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
-                        return //Err("Aktuell können keine Spieler mehr der Runde beitreten");
+                        //return //Err("Aktuell können keine Spieler mehr der Runde beitreten");
                     } 
+                    if game.players.iter().any(|p| p.name == username) {
+                        return Err("Name existiert bereits".to_string());
+                    }
                     let token = uuid::Uuid::new_v4().to_string();
 
                     recv_state.play_dev.lock().await.push(PlayerDevice {
                         name: username.clone(),
                         token: token.clone(),
                     });
+                    
 
                     game.add_player(username);
-
+                    
                     let _ = client_tx.send(serde_json::json!({
                         "type": "JOINED",
                         "token": token
@@ -210,13 +234,13 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
 
                 ClientMessage::TagAction { direction } => {
                     if let Phase::Tag = game.phase {
-                                let _ = handle_vote(&mut game, direction.actor, direction.target, ActionKind::DorfLyncht).await;
+                                let _ = handle_vote(&mut game, &direction.actor, &direction.target, ActionKind::DorfLyncht).await;
                     }
                 }
 
                 ClientMessage::WerwolfAction { direction } => {
                     if let Phase::WerwölfePhase = game.phase {
-                                let _ = handle_vote(& mut game, direction.actor, direction.target, ActionKind::WerwolfFrisst).await;
+                                let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::WerwolfFrisst).await;
                     } else {log::info!("Werwölfe gerade nicht dran!");
                             //return
                         }
@@ -230,7 +254,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                         }
                     } else {
                         log::info!("Seher gerade nicht dran");
-                        return;
+                        //return;
                     }
                 }
                 ClientMessage::HexenAction {direction, hexenAktion , extra_target } => {
@@ -256,20 +280,11 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                         "data": { "sender": sender, "message": message }
                     }).to_string());
                 }
+                
             }
-
-            drop(game);
-
-           
-            send_game_state(&recv_state).await;
+            Ok(())
         }
         //Ok(())
-
-        
-    });
-
-    let _ = tokio::join!(send_task, recv_task);
-}
 
 pub async fn send_game_state(state: &AppState) {
     let game = state.game.lock().await;
@@ -349,10 +364,7 @@ pub async fn index(State(state): State<AppState>) -> Html<String> {
     Html(template.render().unwrap())
 }
 
-pub async fn show_user(
-    Path(username): Path<String>,
-    State(state): State<AppState>,
-) -> Html<String> {
+pub async fn show_user(Path(username): Path<String>,State(state): State<AppState>,) -> Html<String> {
     let game = state.game.lock().await;
 
     let rolle = match game.rolle_von(&username) {
@@ -401,19 +413,18 @@ pub async fn show_user(
     Html(template.render().unwrap())
 }
 
-
-async fn handle_vote(
-    game: &mut Game,
-    actor: String,
-    target: String,
-    action: ActionKind,
-) -> Result<(), String> {
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.has_voted) {
-        return Err("Du hast schon abgestimmt".to_string());
+async fn handle_vote(game: &mut Game,actor: &str,target: &str,action: ActionKind ) -> Result<(), String> {
+    if let Some (_player)= game.players.iter_mut().find(|p| p.name == target){
+        if let Some(_player) = game.players.iter_mut().find(|p| p.name == actor && p.has_voted) {
+                return Err("Du hast schon abgestimmt".to_string())};
+        if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.lebend){
+            player.has_voted = true;
+        } 
+        else{
+        return Err("Spieler nicht gefunden oder nicht lebendig".to_string());
+        }
     }
-    if let Some(player) = game.players.iter_mut().find(|p| p.name == actor && p.lebend) {
-        player.has_voted = true;
-    } else {
+    else {
         return Err("Spieler nicht gefunden oder nicht lebendig".to_string());
     }
 
@@ -476,8 +487,8 @@ async fn handle_vote(
                     Err(msg) => {log::info!("{}",msg)}
                 },
                 ActionKind::DorfLyncht => game.tag_lynchen(&final_target),
-                ActionKind::HexeHext => (),
-                ActionKind::SeherSieht => (),
+                //ActionKind::HexeHext => (),
+                //ActionKind::SeherSieht => (),
             }
             game.votes.clear();
             for player in game.players.iter_mut() {
@@ -492,9 +503,7 @@ async fn handle_vote(
 
     Ok(())
 }
-
-
-#[derive(Deserialize)]
+/*#[derive(Deserialize)]
 pub struct WinnerParams {
     winner: String,
 }
@@ -502,17 +511,16 @@ pub struct WinnerParams {
 pub async fn winner_page(Query(params): Query<WinnerParams>) -> Html<String> {
     let template = WinnerTemplate { winner: params.winner };
     Html(template.render().unwrap())
-}
+}*/
 pub async fn join_page() -> Html<String> {
     let template = JoinTemplate {};
     Html(template.render().unwrap())
 }
-pub async fn play_page(
-    Path(token): Path<String>,
-    State(state): State<AppState>,
-) -> Html<String> {
+pub async fn play_page(Path(token): Path<String>, State(state): State<AppState>,) -> Html<String> {
     let play_dev = state.play_dev.lock().await;
+   
     // Spieler anhand des Tokens finden
+
     if let Some(player) = play_dev.iter().find(|p| p.token == token) {
         let game = state.game.lock().await;
 
@@ -679,13 +687,13 @@ async fn test_Client_message_ACTION_handling(
                         }
                 ClientMessage::TagAction { direction } => {
                     if let Phase::Tag = game.phase {
-                                let _ = handle_vote(&mut game, direction.actor, direction.target, ActionKind::DorfLyncht).await;
+                                let _ = handle_vote(&mut game, &direction.actor, &direction.target, ActionKind::DorfLyncht).await;
                     }
                 }
 
                 ClientMessage::WerwolfAction { direction } => {
                     if let Phase::WerwölfePhase = game.phase {
-                                let _ = handle_vote(& mut game, direction.actor, direction.target, ActionKind::WerwolfFrisst).await;
+                                let _ = handle_vote(& mut game, &direction.actor, &direction.target, ActionKind::WerwolfFrisst).await;
                     } else {log::info!("Werwölfe gerade nicht dran!");
                             return}
                 }
@@ -848,3 +856,99 @@ async fn test_Client_message_ACTION_handling(
         assert_eq!(2,game.runden);
     }
 
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use tokio::sync::{Mutex, broadcast};
+    use std::sync::Arc;
+    #[tokio::test]
+    async fn add_user_msg() {
+        let (tx, _rx) = broadcast::channel(32);
+        let state = AppState {
+            game: Arc::new(Mutex::new(Game::new())),
+            game_started: Arc::new(Mutex::new(false)),
+            server_ip: "127.0.0.1".to_string(),
+            play_dev: Arc::new(Mutex::new(Vec::new())),
+            tx,
+        };
+
+        let username = "Nutzer".to_string();
+
+        let mut game = state.game.lock().await;
+        let mut play_dev = state.play_dev.lock().await;
+
+        let token = uuid::Uuid::new_v4().to_string();
+        play_dev.push(PlayerDevice { name: username.clone(), token: token.clone() });
+        game.add_player(username.clone());
+
+        assert_eq!(game.players.len(), 1);
+        assert_eq!(play_dev.len(), 1);
+        assert_eq!(play_dev[0].name, "Nutzer");
+        assert!(!*state.game_started.lock().await, "Spiel sollte noch nicht gestartet sein");
+    }
+
+
+    #[tokio::test]
+    async fn not_existing_player_gets_lynched(){
+        let mut game = Game::new();
+        game.add_player("Nutzer".into());
+        let result = handle_vote(&mut game,"Nutzer", "NichtNutzer", ActionKind::DorfLyncht).await;
+
+        assert_eq!(result,Err("Spieler nicht gefunden oder nicht lebendig".to_string()));
+    }
+
+
+    #[tokio::test]
+    async fn not_existing_player_cannot_vote(){
+        let mut game = Game::new();
+        game.add_player("Nutzer".into());
+        let result = handle_vote(&mut game,"NichtNutzer", "Nutzer", ActionKind::DorfLyncht).await;
+
+        assert_eq!(result,Err("Spieler nicht gefunden oder nicht lebendig".to_string()));
+    }
+
+
+    #[tokio::test]
+    async fn player_cannot_vote_twice(){
+        let mut game = Game::new();
+        game.add_player("Nutzer1".into());
+        game.add_player("Nutzer2".into());
+        let _ = handle_vote(&mut game,"Nutzer1", "Nutzer2", ActionKind::DorfLyncht).await;
+        let result = handle_vote(&mut game,"Nutzer1", "Nutzer2", ActionKind::DorfLyncht).await;
+
+        assert_eq!(result,Err("Du hast schon abgestimmt".to_string()));
+    }
+
+
+    #[tokio::test]
+    async fn wrong_does_not_change_game_state(){
+        let mut game = Game::new();
+        game.add_player("Nutzer".into());
+        let before = game.clone();
+        let _ = handle_vote(&mut game,"Nutzer", "NichtNutzer", ActionKind::DorfLyncht).await;
+
+        assert_eq!(game, before);
+    }
+    
+
+    #[tokio::test]
+        async fn reject_duplicate_name() {
+        let (tx, _rx) = broadcast::channel(32);
+        let state = AppState {
+            game: Arc::new(Mutex::new(Game::new())),
+            game_started: Arc::new(Mutex::new(false)),
+            server_ip: "127.0.0.1".to_string(),
+            play_dev: Arc::new(Mutex::new(Vec::new())),
+            tx,
+        };
+        let (client_tx, mut _client_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+        let username = "Nutzer".to_string();
+        handle_message(&state, ClientMessage::AddUser{username: username.clone()}, &client_tx).await.unwrap();
+        let result = handle_message(&state, ClientMessage::AddUser{username: username.clone()}, &client_tx).await;
+        
+        assert_eq!(result, Err("Name existiert bereits".to_string()));
+        let game =state.game.lock().await;
+        assert_eq!(game.players.len(),1);
+        
+    }
+}

@@ -4,13 +4,13 @@ use std::str::FromStr;
 use futures::future::err;
 use log::info;
 use rand::seq::SliceRandom;
-use rand::rng;
 //use serde::Serialize;
 //use rand::rng;
 //use serde::Serialize;
 use crate::roles::Rolle;
 use crate::roles::Team;
 use rand::thread_rng;
+use rand::rng;
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -148,7 +148,7 @@ impl Game {
     }
 
     pub fn verteile_rollen(&mut self)->Result<(),String>{
-        let mut rng= thread_rng();
+        let mut rng= rng();
 
         let anzahl_spieler=self.players.len();
         if anzahl_spieler <3{
@@ -407,7 +407,7 @@ mod tests{
         game.add_player("Name2".to_string());
         game.add_player("Name3".to_string());
 
-        game.verteile_rollen();
+        let _ = game.verteile_rollen();
 
         let rolle=game.rolle_von("Name1");
 
@@ -423,7 +423,7 @@ mod tests{
         game.add_player("Name2".to_string());
         game.add_player("Name3".to_string());
 
-        game.verteile_rollen();
+        let _ = game.verteile_rollen();
 
         let rolle=game.rolle_von("Unbekannt");
 
