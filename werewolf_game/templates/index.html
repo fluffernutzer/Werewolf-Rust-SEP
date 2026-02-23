@@ -2,73 +2,232 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <title>Werwolf – Spielstart</title>
+  <title>Werwolf – vertraue niemandem!</title>
   <style>
+    
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
+      background-color: #0a0a0a;
+      background-image: radial-gradient(circle at 10% 20%, #2a2a2a 0%, #0a0a0a 90%);
+      color: #e0e0e0;
+      font-family: 'Open Sans', sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       padding: 20px;
     }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+      background-color: rgba(20, 20, 20, 0.9);
+      backdrop-filter: blur(2px);
+      border: 1px solid #4a0404;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(139, 0, 0, 0.5);
+      padding: 30px;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Cinzel', serif;
+      color: #d4af37;
+      text-shadow: 0 0 5px #8b0000;
+      border-bottom: 2px solid #4a0404;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2rem;
+    }
+
+    h3 {
+      font-size: 1.5rem;
+    }
+
+    .subtitle {
+      font-style: italic;
+      color: #b8860b;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.2rem;
+      border-left: 3px solid #8b0000;
+      padding-left: 15px;
+    }
+
     ul {
       list-style-type: none;
-      padding: 0;
     }
+
     li {
-      padding: 8px;
-      margin: 5px 0;
-      background-color: #f0f0f0;
-      border-radius: 4px;
+      background: rgba(30, 30, 30, 0.8);
+      border-left: 5px solid #8b0000;
+      margin: 10px 0;
+      padding: 12px 15px;
+      border-radius: 0 8px 8px 0;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
     }
-    button {
-      padding: 8px 16px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
+
+    .player-name {
+      font-weight: bold;
+      color: #d4af37;
+    }
+
+    .status.alive {
+      color: #4caf50;
+    }
+
+    .status.dead {
+      color: #8b0000;
+    }
+
+    button, .button {
+      background: #2a0a0a;
+      color: #e0e0e0;
+      border: 1px solid #8b0000;
+      padding: 10px 20px;
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      border-radius: 25px;
       cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px rgba(139, 0, 0, 0.3);
+      margin: 5px;
     }
+
     button:hover {
-      background-color: #45a049;
+      background: #4a0404;
+      box-shadow: 0 0 15px #8b0000;
+      transform: scale(1.05);
+      border-color: #d4af37;
     }
-    input {
-      padding: 8px;
-      margin-right: 10px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
+
+    input, select, textarea {
+      background: #1e1e1e;
+      color: #e0e0e0;
+      border: 1px solid #4a0404;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      margin: 10px 0;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #8b0000;
+      box-shadow: 0 0 10px #8b0000;
+    }
+
+    label {
+      font-family: 'Cinzel', serif;
+      color: #d4af37;
+    }
+
+    img[alt="QR-Code"] {
+      display: block;
+      margin: 20px auto;
+      border: 2px solid #8b0000;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(139,0,0,0.7);
+    }
+
+    .qr-section {
+      text-align: center;
+      margin: 40px 0;
+      padding: 20px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+    }
+
+    .qr-hint {
+      font-size: 0.9rem;
+      color: #a0a0a0;
+    }
+
+    .phase-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 30px;
+      padding: 15px;
+      background: #1e1e1e;
+      border-radius: 8px;
+      border: 1px solid #4a0404;
+    }
+
+    .phase-info strong {
+      color: #d4af37;
+    }
+
+    #phase {
+      color: #8b0000;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .ready-btn {
+      padding: 5px 10px;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
-  <h1>Werwolf – Spielstart</h1>
+  <div class="container">
+    <h1>🐺 Werwolf – vertraue niemandem!</h1>
+    <p class="subtitle">Betritt die Welt der Schatten und denke daran: Nicht jeder ist, was er vorgibt zu sein.</p>
 
+    <form onsubmit="event.preventDefault(); addUser();" class="name-form">
+      <input type="text" id="username" placeholder="dein wahrer Name" required>
+      <button type="submit" class="button">Teil des Spiels werden</button>
+    </form>
 
+    <div class="qr-section">
+      <h3>📱 Verbinde dich mit deinem Handy</h3>
+      <img src="{{ qr_code }}" alt="QR-Code" />
+      <p class="qr-hint">Scanne den Code, um deine Rolle zu empfangen.</p>
+    </div>
 
-  <form onsubmit="event.preventDefault(); addUser();">
-  <input type="text" id="username" placeholder="Dein Name" required>
-  <button type="submit">Name hinzufügen</button>
-</form>
-<img src="{{ qr_code }}" alt="QR-Code" />
-
-
-  <h2>Aktuelle Spieler:</h2>
-  <ul id="users">
-    {% for player in players %}
-      <li>
-        {{ player.name }}
-      {% if player.status %}
-        (lebendig)
-      {% else %}
-        (tot)
-      {% endif %}
-      <button onclick="setReady('{{ player.name }}', true)">Bereit</button>
+    <h2>⚔️ Anwesende Spieler</h2>
+    <ul id="users">
+      {% for player in players %}
+        <li>
+          <span class="player-name">{{ player.name }}</span>
+          {% if player.status %}
+            <span class="status alive">❤️ lebendig</span>
+          {% else %}
+            <span class="status dead">💀 tot</span>
+          {% endif %}
+          <button onclick="setReady('{{ player.name }}', true)" class="ready-btn">bereit!</button>
         </li>
-    {% endfor %}
-  </ul>
+      {% endfor %}
+    </ul>
 
-  <div>
-    <strong>Aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
-    <button onclick="reset_game()">Spiel zurückzusetzen</button>
+    <div class="phase-info">
+      <strong>aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
+      <button onclick="reset_game()" class="reset-btn">🔄 Spiel neu beginnen</button>
+    </div>
   </div>
 
   <script>
@@ -103,8 +262,10 @@
           usersList.innerHTML = data.state.players
             .map(p => `
                 <li>
-                ${p.name} (${p.rolle}) ${p.ready ? '✅' : '❌'}
-                ${!p.ready ? `<button onclick="setReady('${p.name}', true)">Bereit</button>` : ''}
+                  <span class="player-name">${p.name}</span>
+                  ${p.rolle ? `(${p.rolle})` : ''}
+                  ${p.ready ? '✅' : '❌'}
+                  ${!p.ready ? `<button onclick="setReady('${p.name}', true)" class="ready-btn">Bereit ⚡</button>` : ''}
                 </li>
             `)
             .join("");
@@ -113,62 +274,13 @@
         if (data.type === "GAME_STARTED"){
           for (let i=0; i< localPlayers.length; i++){
             const username = localPlayers[i];
-             console.log("Lokaler Spieler startet:", username);
+            console.log("Lokaler Spieler startet:", username);
             window.open(`/${encodeURIComponent(username)}`, "_blank");
           }
         }
       };
     }
-    
 
-    /*function addUser() {
-        const username = document.getElementById("username").value.trim();
-        if (!username) {
-            alert("Bitte gib einen Namen ein!");
-            return;
-        }
-
-        fetch("/add-user", {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: `username=${encodeURIComponent(username)}`,
-        })
-        .then(response => {
-            if (response.redirected) {
-            // Wenn der Server einen Redirect zurückgibt, lade die Seite neu
-            window.location.reload();
-        } else if (response.ok) {
-            // Falls kein Redirect, lade die Seite ebenfalls neu
-            window.location.reload();
-        } else {
-            alert("Fehler beim Hinzufügen des Spielers!");
-        }
-    })
-        .catch(error => {
-            console.error("Fehler:", error);
-            alert("Fehler beim Hinzufügen des Spielers!");
-        });
-        }*/
-
- /*   function addUser() {
-    const username = document.getElementById("username").value.trim();
-    if (!username) {
-        alert("Bitte gib einen Namen ein!");
-        return;
-    }
-
-    // Sende den Benutzernamen als Teil der WebSocket-Nachricht
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "AddUser", data: { username: username } }));
-        document.getElementById("username").value = "";
-        //socket.send(JSON.stringify({ AddUser: username }));
-    } else {
-        alert("Keine Verbindung zum Server!");
-    }
-}*/
-//
 function addUser() {
   const username = document.getElementById("username").value.trim();
   if (!username) {
@@ -183,7 +295,6 @@ function addUser() {
   }
 }
 
-
 function setReady(username, ready) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
@@ -193,7 +304,7 @@ function setReady(username, ready) {
   }
 }
 
-function startGame() {
+    function startGame() {
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({type: "StartGame"}));
       } else {
@@ -201,13 +312,13 @@ function startGame() {
       }
     }
 
-function reset_game(){
-    if (socket && socket.readyState === WebSocket.OPEN) {
+    function reset_game(){
+      if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({type: "ResetGame"}));
       } else {
         alert("Keine Verbindung zum Server!");
       }
-}
+    }
 
     document.addEventListener("DOMContentLoaded", connectWebSocket);
   </script>
