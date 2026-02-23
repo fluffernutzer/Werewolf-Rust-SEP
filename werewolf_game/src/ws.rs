@@ -293,7 +293,10 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                             let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
                         }
                 ClientMessage::AmorAction { actor, target1, target2 } =>{
+                    if let Phase::AmorPhase = game.phase{
                         let _ = game.amor_waehlt(target1, target2);
+                    }
+                    else {log::info!("Amor gerade nicht dran")}
                     }        
                ClientMessage::DoktorAction { direction } => {
                     if game.phase == Phase::DoktorPhase{
@@ -624,17 +627,6 @@ pub async fn play_page(Path(token): Path<String>, State(state): State<AppState>,
 
 
 
-
-
-
-
-
-
-
-
-
-//Testing: 
-
 fn load_game(num: usize) -> Vec<ClientMessage> {
     let path = format!("tests/game{num}.txt");
     let content =
@@ -787,7 +779,10 @@ async fn test_Client_message_ACTION_handling(
                             let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
                         }
                 ClientMessage::AmorAction { actor, target1, target2 } =>{
+                    if let Phase::AmorPhase = game.phase{
                         let _ = game.amor_waehlt(target1, target2);
+                    }
+                    else {log::info!("Amor gerade nicht dran")}
                     }        
                 ClientMessage::DoktorAction { direction } => {
                     if game.phase == Phase::DoktorPhase{
@@ -837,9 +832,11 @@ async fn test_Client_message_ACTION_handling(
             let clientprint = clientmessage.clone();
             let phase_print = game.phase.clone();
             println!("Clientmessage:{:?}",clientprint);
+            println!("Phase:{:?}",game.phase);
             test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
+        println!("remaining: {:?}",remaining);
         let winner = game.check_win();
         assert_eq!(Some(Winner::Werwolf),winner)
     }
@@ -858,11 +855,12 @@ async fn test_Client_message_ACTION_handling(
         game.players = spieler; 
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
-            let phase_print = game.phase.clone();
             println!("Clientmessage:{:?}",clientprint);
+            println!("Phase:{:?}",game.phase);
             test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
+        println!("Remaining: {:?}",remaining);
         let winner = game.check_win();
         assert_eq!(Some(Winner::Dorf),winner)
     }
@@ -882,7 +880,6 @@ async fn test_Client_message_ACTION_handling(
         game.players = spieler; 
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
-            let phase_print = game.phase.clone();
             println!("Clientmessage:{:?}",clientprint);
             test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
         }
@@ -930,13 +927,15 @@ async fn test_Client_message_ACTION_handling(
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
             println!("Clientmessage:{:?}",clientprint);
+            println!("Phase:{:?}",game.phase);
             test_Client_message_ACTION_handling(&mut *game, &state, clientmessage).await;
             
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
-        assert_eq!(["W1", "S", "W2"],*remaining);
+        println!("Remainiung:{:?}",remaining);
+        assert_eq!(["W1", "W2"],*remaining);
         assert_eq!(Some(Winner::Werwolf),game.check_win());
-        assert_eq!(3,game.runden);
+        assert_eq!(4,game.runden);
     }
 
 #[cfg(test)]

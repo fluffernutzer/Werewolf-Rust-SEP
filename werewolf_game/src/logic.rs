@@ -237,6 +237,7 @@ impl Game {
         if liebende > 0 && werwoelfe == 0 && dorf == 0 {
             return Some(Winner::Liebende);
         }
+        println!("Werwölfe: {}, Dorf:{}, Liebende: {}", werwoelfe,dorf,liebende);
 
         None
     }
@@ -697,6 +698,7 @@ mod tests{
         game.phase = Phase::WerwölfePhase;
         
         let result = game.werwolf_toetet("Wolf", "Opfer");
+        for player in &mut game.players{println!("{:?}",player)};
         assert!(result.is_ok());
         assert_eq!(game.nacht_opfer, Some("Opfer".to_string()));
     }

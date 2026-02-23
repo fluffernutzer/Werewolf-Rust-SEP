@@ -192,9 +192,19 @@ impl Game{
             log::error!("Beide Liebenden müssen am Leben sein.");
             return Err("Beide Liebenden müssen am Leben sein.".into());
         }
+        for player in &mut self.players{
+            if player.name == target_1 {
+                player.team = Team::TeamLiebende;
+            }
+        }
+        for player in &mut self.players{
+            if player.name == target_2 {
+                player.team = Team::TeamLiebende;
+            }
+        }
 
-         self.players[index1].team=Team::TeamLiebende;
-         self.players[index2].team=Team::TeamLiebende;
+         //self.players[index1].team=Team::TeamLiebende;
+         //self.players[index2].team=Team::TeamLiebende;
 
         self.liebender_1=Some (target_1.to_string());
         self.liebender_2=Some (target_2.to_string());

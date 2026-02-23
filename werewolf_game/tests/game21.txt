@@ -54,3 +54,13 @@ TagAction Dr W2
 Seher S W1
 TagAction S W2
 TagAction D3 W2
+Hexe tut_nichts H H
+Doktor Dr A
+Seher S D1
+TagAction H D1
+TagAction A D1
+TagAction P D1
+TagAction Dr D1
+TagAction D3 D1
+TagAction D1 D3
+TagAction D2 D3

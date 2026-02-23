@@ -40,3 +40,15 @@ TagAction P W2
 TagAction Dr W2
 TagAction S W2
 TagAction D3 W2
+Hexe tut_nichts H H 
+Doktor Dr Dr
+TagAction W1 D1
+TagAction W2 D1
+TagAction D1 D1
+TagAction D2 D1
+TagAction A D1
+TagAction H D1
+TagAction P D1
+TagAction Dr D1
+TagAction S D1
+TagAction D3 D1

@@ -40,5 +40,6 @@ TagAction P H
 TagAction D1 H
 TagAction D2 H
 TagAction S H
-TagAction A H
-TagAction P H
+Werwolf W1 S
+Werwolf W2 S
+Seher S W1

@@ -40,3 +40,6 @@ TagAction W2 H
 TagAction H W1
 TagAction S H
 TagAction D3 H
+Werwolf W1 S
+Werwolf W2 S
+Seher S W2
