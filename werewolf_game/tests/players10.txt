@@ -1,0 +1,10 @@
+D1 TeamD D 1 0 0 0 0
+W1 TeamW W 1 0 0 0 0
+S TeamD S 1 0 0 0 0
+D3 TeamD D 1 0 0 0 0
+A TeamD A 1 0 0 0 0
+H TeamD H 1 0 0 0 0
+W2 TeamW W 1 0 0 0 0
+Dr TeamD Dr 1 0 0 0 0
+P TeamD P 1 0 0 0 0
+D2 TeamD D 1 0 0 0 0

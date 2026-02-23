@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 //use std::fmt::Display;
 //use futures::future::err;
 //use log::info;
@@ -14,10 +15,13 @@ use rand::rng;
 //use serde::Serialize;
 use crate::roles::Rolle;
 use crate::roles::Team;
+use rand::thread_rng;
+use rand::rng;
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Phase {
+    Spielbeginn,
     Tag,
     AmorPhase,
     WerwölfePhase,
@@ -34,7 +38,6 @@ pub enum HexenAktion{
     Vergiften,
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Spieler {
     pub name: String,
@@ -45,6 +48,7 @@ pub struct Spieler {
     //Für Websocket-Abstimmungen/Bereit zum Spielen: 
     pub ready_state: bool,
     pub has_voted: bool,
+    pub ingame_ready_state: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,8 +80,12 @@ pub struct Game {
     
     //pub abstimmung_done:bool,
     
-    pub votes: HashMap<String,Vec<String>>,
+    //pub abstimmung_done:bool,
     
+    pub votes: HashMap<String,Vec<String>>,
+    pub eligible_players: Vec<String>,
+    pub current_votes: HashMap<String,Vec<String>>,
+    pub ongoing_vote :bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,7 +116,7 @@ impl Game {
     pub fn new() -> Self {
         Game {
             players: Vec::new(),
-            phase: Phase::Tag,
+            phase: Phase::Spielbeginn,
             runden: 1,
             heiltrank_genutzt: false,
             bereits_getoetet: false,
@@ -132,8 +140,9 @@ impl Game {
             ////abstimmung_done:false,
             //
             votes: HashMap::new(),
-            //abstimmung_done:false,
-
+            eligible_players: Vec::new(),
+            current_votes: HashMap::new(),
+            ongoing_vote: false,
         }
     }
 
@@ -146,6 +155,7 @@ impl Game {
             bereits_gesehen:false,
             ready_state:false,
             has_voted:false,
+            ingame_ready_state:false,
         });
     }
 
@@ -327,6 +337,9 @@ impl Game {
         self.hexe_opfer=None;
         self.geheilter_von_hexe=None;
         self.geschuetzter_von_doktor=None;
+        for player in &mut self.players {
+            player.bereits_gesehen =false;
+        }
     }
 }
 
@@ -341,7 +354,7 @@ mod tests{
         let game=Game::new();
 
         assert_eq!(game.players.len(), 0);
-        assert_eq!(game.phase, Phase::Tag);
+        assert_eq!(game.phase, Phase::Spielbeginn);
         assert_eq!(game.heiltrank_genutzt, false);
         assert_eq!(game.bereits_getoetet, false);
         assert_eq!(game.tag_opfer, None);
@@ -431,6 +444,9 @@ mod tests{
     #[test]
     fn test_tag_lynchen_runde1(){
         let mut game=Game::new();
+        game.runden = 2;
+        game.phase = Phase::Tag;
+        assert_eq!(game.phase, Phase::Tag);
 
         game.add_player("Name1".to_string());
         game.add_player("Name2".to_string());
@@ -438,7 +454,28 @@ mod tests{
 
         game.verteile_rollen().unwrap();
 
+        
+
+        game.tag_lynchen("Name1");
+
+        assert!(game.tag_opfer.is_none());
+        assert!(game.players[0].lebend);
         assert_eq!(game.phase, Phase::Tag);
+       
+      
+    }
+
+    #[test]
+    fn test_tag_lynchen_runde2(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        assert_eq!(game.phase, Phase::Tag);
+
+        game.runden=2;
 
         game.tag_lynchen("Name1");
 
@@ -592,6 +629,8 @@ mod tests{
         assert!(!game.players[0].lebend);
     }
 
+
+
     #[test]
     fn test_nacht_aufloesung_normal(){
         let mut game=Game::new();
@@ -710,7 +749,7 @@ mod tests{
         game.phase = Phase::HexePhase;
         game.nacht_opfer = Some("X".to_string());
         
-        let result = game.hexe_arbeitet(HexenAktion::Heilen, "Hexe", "");
+        let result = game.hexe_arbeitet(HexenAktion::Heilen, "Hexe", "".to_string());
         assert!(result.is_ok());
         assert!(game.heiltrank_genutzt);
     }
@@ -723,7 +762,7 @@ mod tests{
         game.players[0].rolle = Rolle::Hexe;
         game.phase = Phase::HexePhase;
         
-        let result = game.hexe_arbeitet(HexenAktion::Vergiften, "Hexe", "Ziel");
+        let result = game.hexe_arbeitet(HexenAktion::Vergiften, "Hexe", "Ziel".to_string());
         assert!(result.is_ok());
         assert_eq!(game.hexe_opfer, Some("Ziel".to_string()));
     }
@@ -737,7 +776,7 @@ mod tests{
         game.players[0].rolle = Rolle::Amor;
         game.phase = Phase::AmorPhase;
         
-        let result = game.amor_waehlt("A", "B");
+        let result = game.amor_waehlt("A".to_string(), "B".to_string());
         assert!(result.is_ok());
         assert_eq!(game.liebender_1, Some("A".to_string()));
         assert_eq!(game.liebender_2, Some("B".to_string()));
@@ -776,7 +815,7 @@ mod tests{
         game.players[1].rolle = Rolle::Werwolf;
         game.phase = Phase::PriesterPhase;
         
-        let result = game.priester_wirft("Priester", Some("Wolf"));
+        let result = game.priester_wirft("Priester", Some("Wolf".to_string()));
         assert!(result.is_ok());
         assert!(!game.players[1].lebend);
     }
@@ -790,7 +829,7 @@ mod tests{
         game.players[1].rolle = Rolle::Dorfbewohner;
         game.phase = Phase::PriesterPhase;
         
-        let result = game.priester_wirft("Priester", Some("Dorf"));
+        let result = game.priester_wirft("Priester", Some("Dorf".to_string()));
         assert!(result.is_ok());
         assert!(!game.players[0].lebend); // Priester tot
         assert!(game.players[1].lebend);  // Dorf lebt
@@ -819,4 +858,61 @@ mod tests{
         }
         assert_eq!(game.check_win(), Some(Winner::Liebende));
     }
-}
+
+
+
+
+impl FromStr for Spieler {
+     type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split_whitespace().collect();
+        if parts.len() < 3 {
+            return Err("Invalid action format");
+        }
+        let name = parts[0].to_string();
+        let team = match parts[1] {
+            "TeamW" => Team::TeamWerwolf,
+            "TeamD" => Team::TeamDorf,
+            "TeamL" => Team::TeamLiebende,
+            _ => return Err("Ungültiges Team"),
+        };
+        let rolle = match parts[2]{
+            "D" => Rolle::Dorfbewohner,
+            "W" => Rolle::Werwolf,
+            "S" => Rolle::Seher,
+            "H" => Rolle::Hexe,
+            "J" => Rolle::Jäger,
+            "A" => Rolle::Amor,
+            "Dr" => Rolle::Doktor,
+            "P"=> Rolle::Priester,
+            _ => return Err("Ungültige Rolle"),
+        };
+        let lebend = match parts[3] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("lebend kein bool"),
+        };
+        let bereits_gesehen = match parts[4] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("bereits_gesehen kein bool"),
+        };
+        let ready_state = match parts[5] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("ready_state kein bool"),
+        };
+        let has_voted = match parts[6] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("has_voted kein bool"),
+        };
+        let ingame_ready_state = match parts[5] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("ready_state kein bool"),
+        };
+        Ok(Spieler{name,team,rolle,lebend,bereits_gesehen,ready_state,has_voted,ingame_ready_state})
+
+}}

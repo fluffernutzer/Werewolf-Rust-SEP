@@ -12,6 +12,7 @@ use axum::{
 };
 //use image::Luma;
 use local_ip_address::local_ip;
+use log::LevelFilter;
 use qrcode::QrCode;
 //use serde::Deserialize;
 use std::sync::Arc;
@@ -58,6 +59,11 @@ struct AppState {
 async fn main() {
     let (tx, _rx) = broadcast::channel(32);
     let ip = local_ip().unwrap().to_string();
+    let tx_1 = tx.clone();
+    let logger = ClientLogger { tx: tx_1};
+    log::set_boxed_logger(Box::new(logger))
+        .expect("Logger konnte nicht gesetzt werden");
+    log::set_max_level(LevelFilter::Info); 
     let state = AppState {
         game: Arc::new(Mutex::new(Game::new())),
         game_started: Arc::new(Mutex::new(false)),
@@ -73,7 +79,7 @@ async fn main() {
         .route("/ws", get(ws::ws_handler))
         .with_state(state);
 
-    println!("Running on http://127.0.0.1:7878");
+    log::info!("Server läuft auf http://127.0.0.1:7878");
     let listener = TcpListener::bind("0.0.0.0:7878").await.unwrap();
 
     axum::serve(listener, app).await.unwrap();
@@ -85,4 +91,31 @@ fn generate_qr(ip: &str) -> String {
     code.render::<qrcode::render::svg::Color>()
         .min_dimensions(220, 220)
         .build()
+}
+
+struct ClientLogger {
+    tx: broadcast::Sender<String>,
+}
+
+impl log::Log for ClientLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        true 
+    }
+
+    fn log(&self, record: &log::Record) {
+        let message = format!("{}", record.args());
+        println!("{}", message); 
+        let chat_message = serde_json::json!({
+            "type": "CHAT_MESSAGE",
+            "data": {
+                "sender": "Server",
+                "message": message,
+            }
+        });
+        let chat_message_str = serde_json::to_string(&chat_message)
+            .expect("Fehler beim Serialisieren der Chat-Nachricht");
+        let _ = self.tx.send(chat_message_str);
+    }
+
+    fn flush(&self) {}
 }

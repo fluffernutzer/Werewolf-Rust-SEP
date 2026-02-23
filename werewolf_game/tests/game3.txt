@@ -1,0 +1,45 @@
+StartGame
+IngameBereit W1 
+IngameBereit W2
+IngameBereit D1
+IngameBereit D2
+IngameBereit D3
+IngameBereit S
+IngameBereit A
+IngameBereit H
+IngameBereit Dr 
+IngameBereit P
+Amor A D1 D2
+Werwolf W1 D1
+Werwolf W2 D2
+Werwolf W1 D1
+Werwolf W2 D1
+Seher S D3
+Priester P D2
+Hexe vergiftet H Dr
+Doktor Dr W1
+Hexe heilt H W2
+TagAction W1 A
+TagAction W2 A
+TagAction D3 A
+TagAction H P
+TagAction S P
+TagAction A P
+TagAction W1 A
+TagAction W2 A
+TagAction D3 A
+TagAction H A
+TagAction S A
+TagAction A A
+Werwolf W1 D3
+Werwolf W2 D3
+Seher S W1
+Hexe tut_nichts H H
+TagAction W1 H
+TagAction W2 H
+TagAction H W1
+TagAction S H
+TagAction D3 H
+Werwolf W1 S
+Werwolf W2 S
+Seher S W2
