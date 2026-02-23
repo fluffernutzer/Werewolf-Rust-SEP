@@ -331,27 +331,6 @@
       </div>
 
       <input type="hidden" id="zielId" value="">
-    <button onclick="sendAction('HexenAction', 'zielId')" style="margin-top: 10px;">Aktion senden</button>
-  </div>
-  {% elif rolle == "Amor" %}
-  <div id="AmorAktionUI">
-    <h3>Amor-Aktion</h3>
-    <div id="Liebender1Auswahl">
-      <label for="Liebender1Id">Liebender1 auswählen:</label>
-      <select id="Liebender1Id">
-        {% for player in players %}
-          <option value="{{ player.name }}">{{ player.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div id="Liebender2Auswahl">
-      <label for="Liebender2Id">Liebender2 auswählen:</label>
-      <select id="Liebender2Id">
-        {% for player in players %}
-          <option value="{{ player.name }}">{{ player.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
 
       <button onclick="sendAction('HexenAktion', 'zielId')">Aktion senden</button>
     </div>
@@ -474,8 +453,6 @@
 
     <footer>Die Nacht ist dunkel und voller Schrecken …</footer>
   </div>
-
-
 
   <script>
     let socket;

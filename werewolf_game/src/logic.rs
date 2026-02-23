@@ -1,12 +1,17 @@
 use std::collections::HashMap;
-use std::fmt::Display;
-use std::iter;
 use std::str::FromStr;
-use futures::future::err;
-use log::info;
+//use std::fmt::Display;
+//use futures::future::err;
+//use log::info;
+//use std::fmt::Display;
+//use futures::future::err;
+//use log::info;
+//use std::fmt::Display;
+////use futures::future::err;
+////use log::info;
 use rand::seq::SliceRandom;
 //use serde::Serialize;
-//use rand::rng;
+use rand::rng;
 //use serde::Serialize;
 use crate::roles::Rolle;
 use crate::roles::Team;
@@ -71,6 +76,8 @@ pub struct Game {
     //pub abstimmung_done:bool,
     pub geschuetzter_von_doktor:Option<String>,
     pub priester_hat_geworfen: bool,
+    //pub abstimmung_done:bool,
+    
     //pub abstimmung_done:bool,
     
     //pub abstimmung_done:bool,
@@ -237,7 +244,6 @@ impl Game {
         if liebende > 0 && werwoelfe == 0 && dorf == 0 {
             return Some(Winner::Liebende);
         }
-        println!("Werwölfe: {}, Dorf:{}, Liebende: {}", werwoelfe,dorf,liebende);
 
         None
     }
@@ -473,6 +479,27 @@ mod tests{
 
         game.tag_lynchen("Name1");
 
+        assert!(game.tag_opfer.is_none());
+        assert!(game.players[0].lebend);
+        assert_eq!(game.phase, Phase::Tag);
+       
+      
+    }
+
+    #[test]
+    fn test_tag_lynchen_runde2(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        assert_eq!(game.phase, Phase::Tag);
+
+        game.runden=2;
+
+        game.tag_lynchen("Name1");
+
         assert!(game.tag_opfer.is_some());
         assert_eq!(game.tag_opfer.as_ref().unwrap(),"Name1");
         assert!(!game.players[0].lebend);
@@ -602,7 +629,6 @@ mod tests{
         assert!(!game.players[0].lebend);
     }
 
-}
 
 
     #[test]
@@ -698,7 +724,6 @@ mod tests{
         game.phase = Phase::WerwölfePhase;
         
         let result = game.werwolf_toetet("Wolf", "Opfer");
-        for player in &mut game.players{println!("{:?}",player)};
         assert!(result.is_ok());
         assert_eq!(game.nacht_opfer, Some("Opfer".to_string()));
     }

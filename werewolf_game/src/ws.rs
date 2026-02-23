@@ -11,15 +11,16 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json};
 //use std::{os::macos::raw::stat, sync::Arc};
 use base64::{Engine as _, engine::general_purpose};
-use qrcode::QrCode;
-use std::{fs, os::macos::raw::stat, str::FromStr, sync::Arc};
-use tokio::sync::{Mutex, broadcast, mpsc};
-use urlencoding::encode;
-use webbrowser;
+use std::{fs, str::FromStr};
+//use qrcode::QrCode;
+//use std::sync::Arc;
+use tokio::sync::{mpsc};
+//use urlencoding::encode;
+//use webbrowser;
 
 use crate::{
     AppState, PlayerDevice, generate_qr,
-    logic::{Game, HexenAktion, Phase, Spieler, Winner},
+    logic::{Game, HexenAktion, Phase},
     roles::Rolle,
 };
 
@@ -328,7 +329,6 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
             }
             Ok(())
         }
-        //Ok(())
 
 pub async fn send_game_state(state: &AppState) {
     let game = state.game.lock().await;
