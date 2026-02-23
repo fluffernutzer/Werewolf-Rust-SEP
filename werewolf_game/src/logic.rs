@@ -16,7 +16,6 @@ use rand::rng;
 use crate::roles::Rolle;
 use crate::roles::Team;
 use rand::thread_rng;
-use rand::rng;
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -466,7 +465,7 @@ mod tests{
     }
 
     #[test]
-    fn test_tag_lynchen_runde2(){
+    /*fn test_tag_lynchen_runde2(){
         let mut game=Game::new();
 
         game.add_player("Name1".to_string());
@@ -484,7 +483,7 @@ mod tests{
         assert_eq!(game.phase, Phase::Tag);
        
       
-    }
+    }*/
 
     #[test]
     fn test_tag_lynchen_runde2(){
@@ -858,7 +857,7 @@ mod tests{
         }
         assert_eq!(game.check_win(), Some(Winner::Liebende));
     }
-
+}
 
 
 
