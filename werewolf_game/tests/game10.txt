@@ -29,7 +29,8 @@ TagAction S P
 TagAction A S 
 Werwolf W1 D3
 Werwolf W2 D3
-Seher S D3
+Seher S W1
+Hexe tut_nichts H H
 TagAction W1 H
 TagAction W2 H
 TagAction D3 H

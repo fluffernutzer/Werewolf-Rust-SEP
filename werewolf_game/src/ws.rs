@@ -213,6 +213,7 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                     }
                 }
                 ClientMessage::IngameBereit{username, ready} => {
+                    if game.phase == Phase::Spielbeginn {
                     if let Some(player) = game.players.iter_mut().find(|p| p.name == username) {
                         player.ingame_ready_state = ready;
                     }
@@ -220,6 +221,9 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                     if game.players.iter().all(|p| p.ingame_ready_state) {
                         game.phase_change();
 
+                    }}
+                    else {
+                        log::error!("Spieler bereits alle bereit")
                     }
                 }
                 ClientMessage::AddUser { username } => {
@@ -256,7 +260,7 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                             Some(target) => {
                                 let _ = handle_vote(&mut game, direction.actor, target, ActionKind::DorfLyncht).await;
                             },
-                            None => log::error!("Werwolf Ziel fehlt"),
+                            None => log::error!("Lynch-Ziel fehlt"),
                         } 
                     }
                 }
@@ -291,13 +295,17 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                 ClientMessage::AmorAction { actor, target1, target2 } =>{
                         let _ = game.amor_waehlt(target1, target2);
                     }        
-                ClientMessage::DoktorAction { direction } => {
+               ClientMessage::DoktorAction { direction } => {
+                    if game.phase == Phase::DoktorPhase{
                     match direction.target {
                             Some(target) => {
                                 let _ = game.doktor_schuetzt(&target);
                             },
-                            None => log::info!("Doktor tut nichts"),
-                        } 
+                            None => {log::info!("Doktor tut nichts");
+                                    game.phase_change();}
+                            
+                        } }
+                        else {log::error!("Doktor gerade nicht dran")}
                         }
                 ClientMessage::PriesterAction { actor, target} => {
                             let _ = game.priester_wirft(&actor, target);
@@ -727,14 +735,17 @@ async fn test_Client_message_ACTION_handling(
 
                         }
                 ClientMessage::IngameBereit{username, ready} => {
+                    if game.phase == Phase::Spielbeginn {
                     if let Some(player) = game.players.iter_mut().find(|p| p.name == username) {
                         player.ingame_ready_state = ready;
                     }
 
                     if game.players.iter().all(|p| p.ingame_ready_state) {
                         game.phase_change();
-                        println!("iname bereits phasenwechsel");
 
+                    }}
+                    else {
+                        log::error!("Spieler bereits alle bereit")
                     }
                 }
                 ClientMessage::TagAction { direction } => {
@@ -743,7 +754,7 @@ async fn test_Client_message_ACTION_handling(
                             Some(target) => {
                                 let _ = handle_vote(&mut game, direction.actor, target, ActionKind::DorfLyncht).await;
                             },
-                            None => log::error!("Werwolf Ziel fehlt"),
+                            None => log::error!("Lynch-Ziel fehlt"),
                         } 
                     }
                 }
@@ -776,15 +787,19 @@ async fn test_Client_message_ACTION_handling(
                             let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
                         }
                 ClientMessage::AmorAction { actor, target1, target2 } =>{
-                    game.amor_waehlt(target1, target2);
-                }
+                        let _ = game.amor_waehlt(target1, target2);
+                    }        
                 ClientMessage::DoktorAction { direction } => {
+                    if game.phase == Phase::DoktorPhase{
                     match direction.target {
                             Some(target) => {
                                 let _ = game.doktor_schuetzt(&target);
                             },
-                            None => log::info!("Doktor tut nichts"),
-                        } 
+                            None => {log::info!("Doktor tut nichts");
+                                    game.phase_change();}
+                            
+                        } }
+                        else {log::error!("Doktor gerade nicht dran")}
                         }
                 ClientMessage::PriesterAction { actor, target} => {
                             let _ = game.priester_wirft(&actor, target);
@@ -821,12 +836,10 @@ async fn test_Client_message_ACTION_handling(
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
             let phase_print = game.phase.clone();
-            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
             println!("Clientmessage:{:?}",clientprint);
-            println!("Phase:{:?}",phase_print);
+            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
-        println!("Remaining:{:?}",remaining);
         let winner = game.check_win();
         assert_eq!(Some(Winner::Werwolf),winner)
     }
@@ -846,12 +859,10 @@ async fn test_Client_message_ACTION_handling(
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
             let phase_print = game.phase.clone();
-            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
             println!("Clientmessage:{:?}",clientprint);
-            println!("Phase:{:?}",phase_print);
+            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
-        println!("Remaining:{:?}",remaining);
         let winner = game.check_win();
         assert_eq!(Some(Winner::Dorf),winner)
     }
@@ -872,12 +883,10 @@ async fn test_Client_message_ACTION_handling(
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
             let phase_print = game.phase.clone();
-            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
             println!("Clientmessage:{:?}",clientprint);
-            println!("Phase:{:?}",phase_print);
+            test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
-        println!("Remaining:{:?}",remaining);
         let winner = game.check_win();
         assert_eq!(Some(Winner::Dorf),winner)
     }
@@ -901,7 +910,6 @@ async fn test_Client_message_ACTION_handling(
             println!("Clientmessage:{:?}",clientprint);
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
-        println!("Remaining:{:?}",remaining);
         let winner = game.check_win();
         assert_eq!(None,winner)
     }
@@ -923,12 +931,12 @@ async fn test_Client_message_ACTION_handling(
             let clientprint = clientmessage.clone();
             println!("Clientmessage:{:?}",clientprint);
             test_Client_message_ACTION_handling(&mut *game, &state, clientmessage).await;
-            println!("Phase:{:?}",game.phase);
+            
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
-        assert_eq!(["W1", "S", "H", "W2"],*remaining);
+        assert_eq!(["W1", "S", "W2"],*remaining);
         assert_eq!(Some(Winner::Werwolf),game.check_win());
-        assert_eq!(2,game.runden);
+        assert_eq!(3,game.runden);
     }
 
 #[cfg(test)]

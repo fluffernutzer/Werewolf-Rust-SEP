@@ -48,7 +48,7 @@ impl Game{
             } else if self.has_role(Rolle::Seher){
                 self.phase=Phase::SeherPhase;
                 return;
-            } else if self.has_role(Rolle::Priester){
+            } else if {self.has_role(Rolle::Priester) && !self.priester_hat_geworfen}{
                 self.phase=Phase::PriesterPhase;
                 return;
             } else if self.has_role(Rolle::Hexe){
@@ -71,7 +71,7 @@ impl Game{
             } else if self.has_role(Rolle::Seher){
                 self.phase=Phase::SeherPhase;
                 return;
-            } else if self.has_role(Rolle::Priester){
+            } else if {self.has_role(Rolle::Priester) && !self.priester_hat_geworfen}{
                 self.phase=Phase::PriesterPhase;
                 return;
             } else if self.has_role(Rolle::Hexe){
@@ -91,7 +91,7 @@ impl Game{
              if self.has_role(Rolle::Seher){
                 self.phase=Phase::SeherPhase;
                 return;
-            } else if self.has_role(Rolle::Priester){
+            } else if {self.has_role(Rolle::Priester) && !self.priester_hat_geworfen}{
                 self.phase=Phase::PriesterPhase;
                 return;
             } else if self.has_role(Rolle::Hexe){
@@ -108,7 +108,7 @@ impl Game{
             }
         }
         if let Phase::SeherPhase=self.phase{
-            if self.has_role(Rolle::Priester){
+            if {self.has_role(Rolle::Priester) && !self.priester_hat_geworfen}{
                 self.phase=Phase::PriesterPhase;
                 return;
             } else if self.has_role(Rolle::Hexe){

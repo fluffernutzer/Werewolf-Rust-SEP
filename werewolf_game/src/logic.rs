@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::iter;
 use std::str::FromStr;
 use futures::future::err;
 use log::info;
@@ -15,6 +16,7 @@ use rand::rng;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Phase {
+    Spielbeginn,
     Tag,
     AmorPhase,
     WerwölfePhase,
@@ -41,6 +43,7 @@ pub struct Spieler {
     //Für Websocket-Abstimmungen/Bereit zum Spielen: 
     pub ready_state: bool,
     pub has_voted: bool,
+    pub ingame_ready_state: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -145,6 +148,7 @@ impl Game {
             bereits_gesehen:false,
             ready_state:false,
             has_voted:false,
+            ingame_ready_state:false,
         });
     }
 
@@ -326,6 +330,9 @@ impl Game {
         self.hexe_opfer=None;
         self.geheilter_von_hexe=None;
         self.geschuetzter_von_doktor=None;
+        for player in &mut self.players {
+            player.bereits_gesehen =false;
+        }
     }
 }
 
@@ -340,7 +347,7 @@ mod tests{
         let game=Game::new();
 
         assert_eq!(game.players.len(), 0);
-        assert_eq!(game.phase, Phase::Tag);
+        assert_eq!(game.phase, Phase::Spielbeginn);
         assert_eq!(game.heiltrank_genutzt, false);
         assert_eq!(game.bereits_getoetet, false);
         assert_eq!(game.tag_opfer, None);
@@ -430,6 +437,9 @@ mod tests{
     #[test]
     fn test_tag_lynchen_runde1(){
         let mut game=Game::new();
+        game.runden = 2;
+        game.phase = Phase::Tag;
+        assert_eq!(game.phase, Phase::Tag);
 
         game.add_player("Name1".to_string());
         game.add_player("Name2".to_string());
@@ -437,7 +447,7 @@ mod tests{
 
         game.verteile_rollen().unwrap();
 
-        assert_eq!(game.phase, Phase::Tag);
+        
 
         game.tag_lynchen("Name1");
 
@@ -871,6 +881,11 @@ impl FromStr for Spieler {
             "0"=> false,
             _ => return Err("has_voted kein bool"),
         };
-        Ok(Spieler{name,team,rolle,lebend,bereits_gesehen,ready_state,has_voted})
+        let ingame_ready_state = match parts[5] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("ready_state kein bool"),
+        };
+        Ok(Spieler{name,team,rolle,lebend,bereits_gesehen,ready_state,has_voted,ingame_ready_state})
 
 }}
