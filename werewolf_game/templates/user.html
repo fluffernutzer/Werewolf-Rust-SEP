@@ -331,6 +331,27 @@
       </div>
 
       <input type="hidden" id="zielId" value="">
+    <button onclick="sendAction('HexenAction', 'zielId')" style="margin-top: 10px;">Aktion senden</button>
+  </div>
+  {% elif rolle == "Amor" %}
+  <div id="AmorAktionUI">
+    <h3>Amor-Aktion</h3>
+    <div id="Liebender1Auswahl">
+      <label for="Liebender1Id">Liebender1 auswählen:</label>
+      <select id="Liebender1Id">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="Liebender2Auswahl">
+      <label for="Liebender2Id">Liebender2 auswählen:</label>
+      <select id="Liebender2Id">
+        {% for player in players %}
+          <option value="{{ player.name }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
       <button onclick="sendAction('HexenAktion', 'zielId')">Aktion senden</button>
     </div>
@@ -367,6 +388,7 @@
         {% endfor %}
       </select>
       <button onclick="sendAction('DoktorAction', 'doktor-target')">Beschützen</button>
+      <button onclick="sendAction('DoktorAction')">Nichts tun</button>
     </div>
     {% elif rolle == "Jäger" %}
     <div>
@@ -410,8 +432,38 @@
         <option value="{{ player.name }}">{{ player.name }}</option>
       {% endfor %}
     </select>
+<<<<<<< HEAD
     <button onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
 >>>>>>> dd0164d (Added Tests for clientMessages and testgames. Fixed minor bugs and included new UI-features)
+=======
+    <button id="lynch-button" onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
+  </div>
+
+  <div id="voting-buttons" style="flex: 1; display: none;">
+    <h3>Aktuelle Abstimmung:</h3>
+    <div id="voting-options"></div>
+  </div>
+</div>
+{% elif phase == "Spielbeginn" %}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
+  <div style="flex: 1; margin-right: 20px;">
+    <h3>Tag-Aktion – Lynchen</h3>
+    <p>Wähle einen Spieler zum Lynchen:</p>
+    <select id="tag-target">
+      {% for player in players %}
+        <option value="{{ player.name }}">{{ player.name }}</option>
+      {% endfor %}
+    </select>
+    <button id="lynch-button" onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
+  </div>
+
+  <div style="flex: 1;">
+    <div id="welcome-message">
+      <h3>Willkommen auf deiner persönlichen Seite.</h3>
+      <p>Mach dich zunächst mit den Funktionen vertraut und wenn du bereit fürs Spiel bist, drücke bitte "Verstanden".</p>
+      <button onclick="sendAction('IngameBereit')">Verstanden</button>
+    </div>
+>>>>>>> 5db7d9f (Neue phase Spielbeginn hinzugefügt. An Phasenlogikänderungen angepasst.)
   </div>
 
   <div id="voting-buttons" style="flex: 1; display: none;">
@@ -432,6 +484,8 @@
 
     <footer>Die Nacht ist dunkel und voller Schrecken …</footer>
   </div>
+
+
 
   <script>
     let socket;
@@ -510,6 +564,7 @@
             appendChatMessage(data.data.sender, data.data.message);
         } else if (data.type === "WINNER") {
     showWinnerPage(data.winner);}
+
       };
     }
 
@@ -521,53 +576,119 @@ function sendAction(type, targetOrId) {
 
   let message;
 
-  if (type === "AmorAction") {
+  // "Verstanden"-Button für Spielbeginn
+  if (type === "IngameBereit") {
     message = {
       type: type,
       data: {
-        direction: { actor: "{{ username }}" },
+        username: "{{ username }}",
+        ready: true
+      }
+    };
+    socket.send(JSON.stringify(message));
+    document.getElementById('welcome-message').style.display = 'none';
+    return;
+  }
+
+ // Amor-Aktion: "Nichts tun"
+  if (type === "AmorAction" && !targetOrId) {
+    message = {
+      type: type,
+      data: {
+        actor: "{{ username }}",
+        target1: null,  // null für Option<String>::None
+        target2: null,  // null für Option<String>::None
+      }
+    };
+  }
+  // Amor-Aktion: Liebespaar verzaubern
+  else if (type === "AmorAction") {
+    message = {
+      type: type,
+      data: {
+        actor: "{{ username }}",
         target1: document.getElementById("Liebender1Id").value,
         target2: document.getElementById("Liebender2Id").value,
       }
     };
   }
+  // Hexen-Aktion
   else if (type === "HexenAction") {
     const hexenAktion = document.getElementById("hexenAktion").value;
-    const target = document.getElementById(targetOrId).value;
+    if (hexenAktion === "NichtsTun" || !targetOrId) {
+      message = {
+        type: type,
+        data: {
+            direction: {
+                actor: "{{ username }}",
+                target: "NONE",
+            },
+          hexenAktion: "NichtsTun",
+        }
+      };
+    } else {
+      const target = document.getElementById("opferId").value;
+      message = {
+        type: type,
+        data: {
+          direction: {
+                actor: "{{ username }}",
+                target: "NONE",
+            },
+          hexenAktion: hexenAktion,
+          extra_target: hexenAktion === "Vergiften" ? target : "None",
+        }
+      };
+    }
+  }
+ // Doktor-Aktion: "Nichts tun"
+  else if (type === "DoktorAction" && !targetOrId) {
     message = {
       type: type,
       data: {
-        direction: { actor: "{{ username }}", target: target },
-        hexenAktion: hexenAktion,
-        extra_target: hexenAktion === "Vergiften" ? document.getElementById("opferId").value : "None",
+        direction: {
+          actor: "{{ username }}",
+          target: null,  // null für Option<String>::None
+        }
       }
     };
   }
-  else if (type === "PriesterAction") {
-    const target = targetOrId ? document.getElementById(targetOrId).value : null;
+  // Seher-Aktion: "Nichts tun"
+  else if (type === "SeherAction") {
+    const target = document.getElementById("seher-target").value;
+    message = {
+      type: type,
+      data: {
+          actor: "{{ username }}",
+          target: target,  
+      }
+    };
+  }
+  // Jäger-Aktion: "Ziel zurücknehmen"
+  else if (type === "JaegerAction" && !targetOrId) {
     message = {
       type: type,
       data: {
         actor: "{{ username }}",
-        target: target || undefined,
+        target: null,  // null für Option<String>::None
       }
     };
   }
-  else if (type === "JaegerAction") {
-    const target = targetOrId ? document.getElementById(targetOrId).value : null;
+  // Priester-Aktion: "Nichts tun"
+  else if (type === "PriesterAction" && !targetOrId) {
     message = {
       type: type,
       data: {
         actor: "{{ username }}",
-        target: target || undefined,
+        target: null, 
       }
     };
   }
-  else {
-    const target = typeof targetOrId === "string" && document.getElementById(targetOrId) === null
+  else if (type === "WerwolfAction") {
+    // Wenn targetOrId ein String ist (z. B. "Max Mustermann"), direkt verwenden
+    const target = (typeof targetOrId === "string" && targetOrId !== "werwolf-target")
       ? targetOrId
-      : document.getElementById(targetOrId).value;
-
+      : document.getElementById("werwolf-target").value;
     message = {
       type: type,
       data: {
@@ -578,9 +699,38 @@ function sendAction(type, targetOrId) {
       }
     };
   }
+  else if (type === "TagAction") {
+    // Wenn targetOrId ein String ist (z. B. "Max Mustermann"), direkt verwenden
+    const target = (typeof targetOrId === "string" && targetOrId !== "tag-target")
+      ? targetOrId
+      : document.getElementById("tag-target").value;
+    message = {
+      type: type,
+      data: {
+        direction: {
+          actor: "{{ username }}",
+          target: target,
+        }
+      }
+    };
+  }
+  // Standardfall für alle anderen Aktionen mit Target
+  else {
+    const target = typeof targetOrId === "string" ? document.getElementById(targetOrId).value : targetOrId;
+    message = {
+      type: type,
+      data: {
+        direction: {
+          actor: "{{ username }}",
+          target: target,  // String für Option<String>::Some
+        }
+      }
+    };
+  }
 
   socket.send(JSON.stringify(message));
 }
+
 
     function sendChatMessage() {
   const input = document.getElementById("chat-input");

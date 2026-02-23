@@ -1,4 +1,14 @@
 StartGame
+IngameBereit W1 
+IngameBereit W2
+IngameBereit D1
+IngameBereit D2
+IngameBereit D3
+IngameBereit S
+IngameBereit A
+IngameBereit H
+IngameBereit Dr 
+IngameBereit P
 TagAction W1 D1
 TagAction W2 D1
 TagAction D3 D1

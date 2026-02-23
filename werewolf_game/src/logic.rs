@@ -592,57 +592,8 @@ mod tests{
     }
 
 }
-// Für Testzwecke: 
 
-impl FromStr for Spieler {
-     type Err = &'static str;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split_whitespace().collect();
-        if parts.len() < 3 {
-            return Err("Invalid action format");
-        }
-        let name = parts[0].to_string();
-        let team = match parts[1] {
-            "TeamW" => Team::TeamWerwolf,
-            "TeamD" => Team::TeamDorf,
-            "TeamL" => Team::TeamLiebende,
-            _ => return Err("Ungültiges Team"),
-        };
-        let rolle = match parts[2]{
-            "D" => Rolle::Dorfbewohner,
-            "W" => Rolle::Werwolf,
-            "S" => Rolle::Seher,
-            "H" => Rolle::Hexe,
-            "J" => Rolle::Jäger,
-            "A" => Rolle::Amor,
-            "Dr" => Rolle::Doktor,
-            "P"=> Rolle::Priester,
-            _ => return Err("Ungültige Rolle"),
-        };
-        let lebend = match parts[3] {
-            "1" => true,
-            "0"=> false,
-            _ => return Err("lebend kein bool"),
-        };
-        let bereits_gesehen = match parts[4] {
-            "1" => true,
-            "0"=> false,
-            _ => return Err("bereits_gesehen kein bool"),
-        };
-        let ready_state = match parts[5] {
-            "1" => true,
-            "0"=> false,
-            _ => return Err("ready_state kein bool"),
-        };
-        let has_voted = match parts[6] {
-            "1" => true,
-            "0"=> false,
-            _ => return Err("has_voted kein bool"),
-        };
-        Ok(Spieler{name,team,rolle,lebend,bereits_gesehen,ready_state,has_voted})
-
-}}
     #[test]
     fn test_nacht_aufloesung_normal(){
         let mut game=Game::new();
@@ -873,3 +824,53 @@ impl FromStr for Spieler {
 
 
 
+
+impl FromStr for Spieler {
+     type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split_whitespace().collect();
+        if parts.len() < 3 {
+            return Err("Invalid action format");
+        }
+        let name = parts[0].to_string();
+        let team = match parts[1] {
+            "TeamW" => Team::TeamWerwolf,
+            "TeamD" => Team::TeamDorf,
+            "TeamL" => Team::TeamLiebende,
+            _ => return Err("Ungültiges Team"),
+        };
+        let rolle = match parts[2]{
+            "D" => Rolle::Dorfbewohner,
+            "W" => Rolle::Werwolf,
+            "S" => Rolle::Seher,
+            "H" => Rolle::Hexe,
+            "J" => Rolle::Jäger,
+            "A" => Rolle::Amor,
+            "Dr" => Rolle::Doktor,
+            "P"=> Rolle::Priester,
+            _ => return Err("Ungültige Rolle"),
+        };
+        let lebend = match parts[3] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("lebend kein bool"),
+        };
+        let bereits_gesehen = match parts[4] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("bereits_gesehen kein bool"),
+        };
+        let ready_state = match parts[5] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("ready_state kein bool"),
+        };
+        let has_voted = match parts[6] {
+            "1" => true,
+            "0"=> false,
+            _ => return Err("has_voted kein bool"),
+        };
+        Ok(Spieler{name,team,rolle,lebend,bereits_gesehen,ready_state,has_voted})
+
+}}

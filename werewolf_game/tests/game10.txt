@@ -1,14 +1,14 @@
 StartGame
-TagAction W1 S
-TagAction W2 S
-TagAction D3 S
-TagAction H S
-TagAction Dr S
-TagAction P S
-TagAction D1 S
-TagAction D2 S
-TagAction S P
-TagAction A S 
+IngameBereit W1 
+IngameBereit W2
+IngameBereit D1
+IngameBereit D2
+IngameBereit D3
+IngameBereit S
+IngameBereit A
+IngameBereit H
+IngameBereit Dr 
+IngameBereit P
 Amor A D1 D2
 Werwolf W1 D1
 Werwolf W2 D1
@@ -17,6 +17,19 @@ Priester P D2
 Hexe vergiftet H Dr
 Doktor Dr W1
 Hexe heilt H W2
+TagAction W1 A
+TagAction W2 A
+TagAction D3 A
+TagAction H A
+TagAction Dr A
+TagAction P A
+TagAction D1 A
+TagAction D2 S
+TagAction S P
+TagAction A S 
+Werwolf W1 D3
+Werwolf W2 D3
+Seher S D3
 TagAction W1 H
 TagAction W2 H
 TagAction D3 H
@@ -28,7 +41,3 @@ TagAction D2 H
 TagAction S H
 TagAction A H
 TagAction P H
-Werwolf W1 D3
-Werwolf W2 D3
-Werwolf W1 H
-Werwolf W2 H

@@ -60,6 +60,10 @@ struct PlayerTemplate<'a> {
 pub enum ClientMessage{
     StartGame,
     ResetGame,
+    IngameBereit{
+        username: String,
+        ready: bool,
+    },
     AddUser {
         username: String,
     },
@@ -74,10 +78,11 @@ pub enum ClientMessage{
         direction: ActionForm,
     },
     SeherAction {
-        direction: ActionForm,
+        actor: String,
+        target: String,
     },
     HexenAction{direction: ActionForm, hexenAktion:HexenAktion, extra_target: String},
-    AmorAction {direction:ActionForm, target1: String, target2: String },
+    AmorAction {actor: String, target1: String, target2: String },
     DoktorAction { direction: ActionForm },
     PriesterAction { actor: String, target: Option<String> },
     JaegerAction { actor: String, target: Option<String> },
@@ -90,7 +95,7 @@ pub enum ClientMessage{
 #[derive(Serialize, Deserialize, Debug,Clone)]
 pub struct ActionForm {
     pub actor: String,
-    pub target: String,
+    pub target: Option<String>,
 }
 
 pub enum ActionKind {
@@ -167,7 +172,7 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                     if !*recv_state.game_started.lock().await {
                         *recv_state.game_started.lock().await = true;
 
-                        game.phase = Phase::Tag;
+                        game.phase = Phase::Spielbeginn;
                         game.runden = 1;
                         let _ = game.verteile_rollen();
 
@@ -198,7 +203,7 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                     if game.players.iter().all(|p| p.ready_state) {
                         *recv_state.game_started.lock().await = true;
 
-                        game.phase = Phase::Tag;
+                        game.phase = Phase::Spielbeginn;
                         game.runden = 1;
                         let _ = game.verteile_rollen();
 
@@ -207,7 +212,16 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                         }).to_string());
                     }
                 }
+                ClientMessage::IngameBereit{username, ready} => {
+                    if let Some(player) = game.players.iter_mut().find(|p| p.name == username) {
+                        player.ingame_ready_state = ready;
+                    }
 
+                    if game.players.iter().all(|p| p.ingame_ready_state) {
+                        game.phase_change();
+
+                    }
+                }
                 ClientMessage::AddUser { username } => {
                     if *state.game_started.lock().await {
                         log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
@@ -238,23 +252,33 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
 
                 ClientMessage::TagAction { direction } => {
                     if let Phase::Tag = game.phase {
-                                let _ = handle_vote(&mut game, direction.actor, direction.target, ActionKind::DorfLyncht).await;
+                         match direction.target {
+                            Some(target) => {
+                                let _ = handle_vote(&mut game, direction.actor, target, ActionKind::DorfLyncht).await;
+                            },
+                            None => log::error!("Werwolf Ziel fehlt"),
+                        } 
                     }
                 }
 
                 ClientMessage::WerwolfAction { direction } => {
                     if let Phase::WerwölfePhase = game.phase {
-                                let _ = handle_vote(& mut game, direction.actor, direction.target, ActionKind::WerwolfFrisst).await;
+                        match direction.target {
+                            Some(target) => {
+                                let _ = handle_vote(& mut game, direction.actor, target, ActionKind::WerwolfFrisst).await;
+                            },
+                            None => log::error!("Werwolf Ziel fehlt"),
+                        }
                     } else {log::info!("Werwölfe gerade nicht dran!");
                             //return
                         }
                 }
 
-                ClientMessage::SeherAction { direction } => {
+                ClientMessage::SeherAction { actor,target} => {
                     if let Phase::SeherPhase = game.phase {
-                        if let Ok(rolle) = game.seher_schaut(&direction.target) {
+                        if let Ok(rolle) = game.seher_schaut(&target) {
                             game.last_seher_result =
-                                Some((direction.target.clone(), rolle));
+                                Some((target.clone(), rolle));
                         }
                     } else {
                         log::info!("Seher gerade nicht dran");
@@ -264,11 +288,16 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                 ClientMessage::HexenAction {direction, hexenAktion , extra_target } => {
                             let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
                         }
-                ClientMessage::AmorAction { direction, target1, target2 } =>{
-                            let _ = game.amor_waehlt(target1, target2);
-                        }
+                ClientMessage::AmorAction { actor, target1, target2 } =>{
+                        let _ = game.amor_waehlt(target1, target2);
+                    }        
                 ClientMessage::DoktorAction { direction } => {
-                            let _ = game.doktor_schuetzt(&direction.target);
+                    match direction.target {
+                            Some(target) => {
+                                let _ = game.doktor_schuetzt(&target);
+                            },
+                            None => log::info!("Doktor tut nichts"),
+                        } 
                         }
                 ClientMessage::PriesterAction { actor, target} => {
                             let _ = game.priester_wirft(&actor, target);
@@ -446,6 +475,7 @@ async fn handle_vote(
         .iter()
         .filter(|p| {
             p.lebend && match game.phase {
+                Phase::Spielbeginn => false,
                 Phase::Tag => true,
                 Phase::WerwölfePhase => p.rolle == Rolle::Werwolf,
                 Phase::SeherPhase => p.rolle == Rolle::Seher,
@@ -628,18 +658,19 @@ impl FromStr for ClientMessage {
             ["StartGame"] => Ok(ClientMessage::StartGame),
             ["ResetGame"] => Ok(ClientMessage::ResetGame),
             ["AddUser", username] => Ok(ClientMessage::AddUser { username: username.to_string() }),
+            ["IngameBereit", username] => Ok(ClientMessage::IngameBereit { username: username.to_string(), ready: true }),
             ["ReadyStatus", username, _, ready] => {
                 let ready = ready.parse::<bool>().map_err(|_| "Invalid bool for ready status")?;
                 Ok(ClientMessage::ReadyStatus { username: username.to_string(), ready })
             }
             ["TagAction", actor, target] => Ok(ClientMessage::TagAction {
-                direction: ActionForm { actor: actor.to_string(), target: target.to_string() },
+                direction: ActionForm { actor: actor.to_string(), target: Some(target.to_string()) },
             }),
             ["Werwolf", actor, target] => Ok(ClientMessage::WerwolfAction {
-                direction: ActionForm { actor: actor.to_string(), target: target.to_string() },
+                direction: ActionForm { actor: actor.to_string(), target: Some(target.to_string()) },
             }),
             ["Seher", actor, target] => Ok(ClientMessage::SeherAction {
-                direction: ActionForm { actor: actor.to_string(), target: target.to_string() },
+                 actor: actor.to_string(), target: target.to_string() ,
             }),
             ["Hexe",hexenaktion, actor, extra_target] => {
             let hexenaktion = match *hexenaktion {
@@ -649,16 +680,16 @@ impl FromStr for ClientMessage {
                 _ => return Err("ungültige Hexenaktion".to_string()),
             };
             Ok(ClientMessage::HexenAction {
-                direction: ActionForm { actor: actor.to_string(), target: "None".to_string() },
+                direction: ActionForm { actor: actor.to_string(), target: Some("None".to_string()) },
                 hexenAktion: hexenaktion,extra_target: extra_target.to_string(),
             })},
             ["Amor", actor, target1, target2] => Ok(ClientMessage::AmorAction {
-                direction: ActionForm { actor: actor.to_string(), target: target1.to_string() },
+                actor: actor.to_string(),
                 target1: target1.to_string(),
                 target2: target2.to_string(),
             }),
             ["Doktor", actor, target] => Ok(ClientMessage::DoktorAction {
-                direction: ActionForm { actor: actor.to_string(), target: target.to_string() },
+                direction: ActionForm { actor: actor.to_string(), target: Some(target.to_string()) },
             }),
             ["Priester", actor, target @ ..] => {
                 let target = if target.is_empty() {None} 
@@ -695,24 +726,46 @@ async fn test_Client_message_ACTION_handling(
                                 println!("Zurüclsetzen beendet");
 
                         }
+                ClientMessage::IngameBereit{username, ready} => {
+                    if let Some(player) = game.players.iter_mut().find(|p| p.name == username) {
+                        player.ingame_ready_state = ready;
+                    }
+
+                    if game.players.iter().all(|p| p.ingame_ready_state) {
+                        game.phase_change();
+                        println!("iname bereits phasenwechsel");
+
+                    }
+                }
                 ClientMessage::TagAction { direction } => {
                     if let Phase::Tag = game.phase {
-                                let _ = handle_vote(&mut game, direction.actor, direction.target, ActionKind::DorfLyncht).await;
+                         match direction.target {
+                            Some(target) => {
+                                let _ = handle_vote(&mut game, direction.actor, target, ActionKind::DorfLyncht).await;
+                            },
+                            None => log::error!("Werwolf Ziel fehlt"),
+                        } 
                     }
                 }
 
                 ClientMessage::WerwolfAction { direction } => {
                     if let Phase::WerwölfePhase = game.phase {
-                                let _ = handle_vote(& mut game, direction.actor, direction.target, ActionKind::WerwolfFrisst).await;
+                        match direction.target {
+                            Some(target) => {
+                                let _ = handle_vote(& mut game, direction.actor, target, ActionKind::WerwolfFrisst).await;
+                            },
+                            None => log::error!("Werwolf Ziel fehlt"),
+                        }
                     } else {log::info!("Werwölfe gerade nicht dran!");
-                            return}
+                            //return
+                        }
                 }
 
-                ClientMessage::SeherAction { direction } => {
+                ClientMessage::SeherAction { actor,target} => {
                     if let Phase::SeherPhase = game.phase {
-                        if let Ok(rolle) = game.seher_schaut(&direction.target) {
+                        if let Ok(rolle) = game.seher_schaut(&target) {
                             game.last_seher_result =
-                                Some((direction.target.clone(), rolle));
+                                Some((target.clone(), rolle));
                         }
                     } else {
                         log::info!("Seher gerade nicht dran");
@@ -722,11 +775,16 @@ async fn test_Client_message_ACTION_handling(
                 ClientMessage::HexenAction {direction, hexenAktion , extra_target } => {
                             let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
                         }
-                ClientMessage::AmorAction { direction, target1, target2 } =>{
-                            let _ = game.amor_waehlt(target1, target2);
-                        }
+                ClientMessage::AmorAction { actor, target1, target2 } =>{
+                    game.amor_waehlt(target1, target2);
+                }
                 ClientMessage::DoktorAction { direction } => {
-                            let _ = game.doktor_schuetzt(&direction.target);
+                    match direction.target {
+                            Some(target) => {
+                                let _ = game.doktor_schuetzt(&target);
+                            },
+                            None => log::info!("Doktor tut nichts"),
+                        } 
                         }
                 ClientMessage::PriesterAction { actor, target} => {
                             let _ = game.priester_wirft(&actor, target);
@@ -758,11 +816,14 @@ async fn test_Client_message_ACTION_handling(
         let spieler = load_players(10);
         let spielablauf = load_game(10);
         let mut game = state.game.lock().await;
+        game.runden = 2;
         game.players = spieler; 
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
+            let phase_print = game.phase.clone();
             test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
             println!("Clientmessage:{:?}",clientprint);
+            println!("Phase:{:?}",phase_print);
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
         println!("Remaining:{:?}",remaining);
@@ -784,8 +845,10 @@ async fn test_Client_message_ACTION_handling(
         game.players = spieler; 
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
+            let phase_print = game.phase.clone();
             test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
             println!("Clientmessage:{:?}",clientprint);
+            println!("Phase:{:?}",phase_print);
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
         println!("Remaining:{:?}",remaining);
@@ -808,8 +871,10 @@ async fn test_Client_message_ACTION_handling(
         game.players = spieler; 
         for clientmessage in spielablauf {
             let clientprint = clientmessage.clone();
+            let phase_print = game.phase.clone();
             test_Client_message_ACTION_handling(&mut game, &state, clientmessage).await;
             println!("Clientmessage:{:?}",clientprint);
+            println!("Phase:{:?}",phase_print);
         }
         let remaining:Vec<String> = game.players.iter().filter(|p| {p.lebend}).map(|p| p.name.clone()).collect();
         println!("Remaining:{:?}",remaining);
