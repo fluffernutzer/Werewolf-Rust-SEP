@@ -323,7 +323,7 @@
 
       <div id="opferAuswahl" style="display: none;">
         <label for="opferId">Opfer auswählen:</label>
-        <select id="opferId">
+        <select id="opferId" onchange="updateZielId()">
           {% for player in players %}
             <option value="{{ player.name }}">{{ player.name }}</option>
           {% endfor %}

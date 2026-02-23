@@ -291,7 +291,6 @@ function addUser() {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type: "AddUser", data: { username: username } }));
     document.getElementById("username").value = "";
-    document.getElementById("ready-section").style.display = "block";
   }
 }
 
