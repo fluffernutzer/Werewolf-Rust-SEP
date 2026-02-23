@@ -552,4 +552,147 @@ mod tests{
         assert!(!game.players[0].lebend);
     }
 
+    #[test]
+    fn test_werwolf_toetet() {
+        let mut game = Game::new();
+        game.add_player("Wolf".into());
+        game.add_player("Opfer".into());
+        game.players[0].rolle = Rolle::Werwolf;
+        game.phase = Phase::WerwölfePhase;
+        
+        let result = game.werwolf_toetet("Wolf", "Opfer");
+        assert!(result.is_ok());
+        assert_eq!(game.nacht_opfer, Some("Opfer".to_string()));
+    }
+
+    #[test]
+    fn test_seher_schaut() {
+        let mut game = Game::new();
+        game.add_player("Seher".into());
+        game.add_player("Ziel".into());
+        game.players[0].rolle = Rolle::Seher;
+        game.players[1].rolle = Rolle::Werwolf;
+        game.phase = Phase::SeherPhase;
+        
+        let rolle = game.seher_schaut("Ziel").unwrap();
+        assert_eq!(rolle, Rolle::Werwolf);
+    }
+
+    #[test]
+    fn test_hexe_heilt() {
+        let mut game = Game::new();
+        game.add_player("Hexe".into());
+        game.players[0].rolle = Rolle::Hexe;
+        game.phase = Phase::HexePhase;
+        game.nacht_opfer = Some("X".to_string());
+        
+        let result = game.hexe_arbeitet(HexenAktion::Heilen, "Hexe", "");
+        assert!(result.is_ok());
+        assert!(game.heiltrank_genutzt);
+    }
+
+    #[test]
+    fn test_hexe_vergiftet() {
+        let mut game = Game::new();
+        game.add_player("Hexe".into());
+        game.add_player("Ziel".into());
+        game.players[0].rolle = Rolle::Hexe;
+        game.phase = Phase::HexePhase;
+        
+        let result = game.hexe_arbeitet(HexenAktion::Vergiften, "Hexe", "Ziel");
+        assert!(result.is_ok());
+        assert_eq!(game.hexe_opfer, Some("Ziel".to_string()));
+    }
+
+    #[test]
+    fn test_amor_verliebt() {
+        let mut game = Game::new();
+        game.add_player("Amor".into());
+        game.add_player("A".into());
+        game.add_player("B".into());
+        game.players[0].rolle = Rolle::Amor;
+        game.phase = Phase::AmorPhase;
+        
+        let result = game.amor_waehlt("A", "B");
+        assert!(result.is_ok());
+        assert_eq!(game.liebender_1, Some("A".to_string()));
+        assert_eq!(game.liebender_2, Some("B".to_string()));
+    }
+
+    #[test]
+    fn test_jaeger_schiesst() {
+        let mut game = Game::new();
+        game.add_player("Jäger".into());
+        game.add_player("Ziel".into());
+        game.players[0].rolle = Rolle::Jäger;
+        game.jaeger_ziel = Some("Ziel".to_string());
+        
+        game.spieler_stirbt("Jäger");
+        assert!(!game.players[1].lebend);
+    }
+
+    #[test]
+    fn test_doktor_schuetzt() {
+        let mut game = Game::new();
+        game.add_player("Doktor".into());
+        game.add_player("Patient".into());
+        game.players[0].rolle = Rolle::Doktor;
+        game.phase = Phase::DoktorPhase;
+        
+        let _ = game.doktor_schuetzt("Patient");
+        assert_eq!(game.geschuetzter_von_doktor, Some("Patient".to_string()));
+    }
+
+    #[test]
+    fn test_priester_tötet_werwolf() {
+        let mut game = Game::new();
+        game.add_player("Priester".into());
+        game.add_player("Wolf".into());
+        game.players[0].rolle = Rolle::Priester;
+        game.players[1].rolle = Rolle::Werwolf;
+        game.phase = Phase::PriesterPhase;
+        
+        let result = game.priester_wirft("Priester", Some("Wolf"));
+        assert!(result.is_ok());
+        assert!(!game.players[1].lebend);
+    }
+
+    #[test]
+    fn test_priester_stirbt_bei_falschem_ziel() {
+        let mut game = Game::new();
+        game.add_player("Priester".into());
+        game.add_player("Dorf".into());
+        game.players[0].rolle = Rolle::Priester;
+        game.players[1].rolle = Rolle::Dorfbewohner;
+        game.phase = Phase::PriesterPhase;
+        
+        let result = game.priester_wirft("Priester", Some("Dorf"));
+        assert!(result.is_ok());
+        assert!(!game.players[0].lebend); // Priester tot
+        assert!(game.players[1].lebend);  // Dorf lebt
+    }
+
+    #[test]
+    fn test_liebespaar_stirbt_zusammen() {
+        let mut game = Game::new();
+        game.add_player("A".into());
+        game.add_player("B".into());
+        game.liebender_1 = Some("A".to_string());
+        game.liebender_2 = Some("B".to_string());
+        
+        game.spieler_stirbt("A");
+        assert!(!game.players[1].lebend);
+    }
+
+    #[test]
+    fn test_liebende_gewinnen() {
+        let mut game = Game::new();
+        game.add_player("L1".into());
+        game.add_player("L2".into());
+        for p in &mut game.players {
+            p.lebend = true;
+            p.team = Team::TeamLiebende;
+        }
+        assert_eq!(game.check_win(), Some(Winner::Liebende));
+    }
 }
