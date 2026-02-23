@@ -109,7 +109,7 @@ impl Game {
     pub fn new() -> Self {
         Game {
             players: Vec::new(),
-            phase: Phase::Tag,
+            phase: Phase::Spielbeginn,
             runden: 1,
             heiltrank_genutzt: false,
             bereits_getoetet: false,
