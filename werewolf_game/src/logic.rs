@@ -82,6 +82,7 @@ pub struct Game {
 pub enum Winner {
     Dorf,
     Werwolf,
+    Liebende,
 }
 
 
@@ -209,33 +210,28 @@ impl Game {
         self.phase_change();
     }}
     pub fn check_win(&self) -> Option<Winner> {
-        let lebende_spieler = self.players
-            .iter()
-            .filter(|p| p.lebend)
-            .count();
+        let mut werwoelfe = 0;
+        let mut dorf = 0;
+        let mut liebende = 0;
 
-        let lebende_dorfspieler = self.players
-            .iter()
-            .filter(|p| p.lebend && p.team != Team::TeamWerwolf)
-            .count();
-        let lebende_werwoelfe = self.players
-            .iter()
-            .filter(|p| p.lebend && p.team == Team::TeamWerwolf)
-            .count();
+        for p in &self.players {
+            if p.lebend {
+                match p.team {
+                    Team::TeamWerwolf => werwoelfe += 1,
+                    Team::TeamDorf => dorf += 1,
+                    Team::TeamLiebende => liebende += 1,
+                }
+            }
+        }
 
-        let lebende_dorfspieler = self.players
-            .iter()
-            .filter(|p| p.lebend && p.team != Team::TeamWerwolf)
-            .count();
-
-        if lebende_spieler == 0 {
-            return None;
-        } else 
-        if lebende_werwoelfe == 0 {
-            return Some(Winner::Dorf);
-        } else 
-        if lebende_werwoelfe >= lebende_dorfspieler {
+        if werwoelfe > 0 && dorf == 0 && liebende == 0 {
             return Some(Winner::Werwolf);
+        }
+        if dorf > 0 && werwoelfe == 0 && liebende == 0 {
+            return Some(Winner::Dorf);
+        }
+        if liebende > 0 && werwoelfe == 0 && dorf == 0 {
+            return Some(Winner::Liebende);
         }
 
         None
