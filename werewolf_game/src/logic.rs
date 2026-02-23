@@ -203,7 +203,7 @@ impl Game {
     pub fn tag_lynchen(&mut self, name: &str) {
         if self.runden==1{
             log::info!("Runde 1: Niemand wird gelyncht.");
-        self.phase_change();
+            return;
         } else {
         self.tag_opfer = Some(name.to_string());
         log::info!("(TAG) Dorf lyncht {}", name);
@@ -429,7 +429,7 @@ mod tests{
         }
 
     #[test]
-    fn test_tag_lynchen(){
+    fn test_tag_lynchen_runde1(){
         let mut game=Game::new();
 
         game.add_player("Name1".to_string());
@@ -442,12 +442,31 @@ mod tests{
 
         game.tag_lynchen("Name1");
 
+        assert!(game.tag_opfer.is_none());
+        assert!(game.players[0].lebend);
+        assert_eq!(game.phase, Phase::Tag);
+       
+      
+    }
+
+    #[test]
+    fn test_tag_lynchen_runde2(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        assert_eq!(game.phase, Phase::Tag);
+
+        game.runden=2;
+
+        game.tag_lynchen("Name1");
+
         assert!(game.tag_opfer.is_some());
         assert_eq!(game.tag_opfer.as_ref().unwrap(),"Name1");
         assert!(!game.players[0].lebend);
         assert_eq!(game.phase, Phase::WerwölfePhase);
-       
-      
     }
 
     #[test]
@@ -491,6 +510,29 @@ mod tests{
 
         assert_eq!(result, Some(Winner::Werwolf));
 
+    }
+
+    #[test]
+    fn test_check_win_liebende(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.players[0].team=Team::TeamDorf;
+        game.players[1].team=Team::TeamLiebende;
+        game.players[2].team=Team::TeamLiebende;
+
+        for p in game.players.iter_mut(){
+            if p.team!=Team::TeamLiebende{
+                p.lebend=false;
+            }
+        }
+
+        let result=game.check_win();
+
+        assert_eq!(result,Some(Winner::Liebende));
     }
 
     #[test]
@@ -549,6 +591,90 @@ mod tests{
 
         assert!(!game.players[0].lebend);
     }
+
+    #[test]
+    fn test_nacht_aufloesung_normal(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.nacht_opfer=Some("Name1".into());
+
+        game.nacht_aufloesung();
+
+        assert!(!game.players[0].lebend);
+        assert_eq!(game.nacht_opfer,None);
+        assert_eq!(game.hexe_opfer,None);
+        assert_eq!(game.geheilter_von_hexe,None);
+        assert_eq!(game.geschuetzter_von_doktor,None);
+    }
+
+    #[test]
+    fn test_nacht_aufloesung_geheilt_von_hexe(){
+        let mut game= Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+        
+        game.nacht_opfer=Some("Name1".into());
+        game.geheilter_von_hexe=Some("Name1".into());
+
+        game.nacht_aufloesung();
+
+        assert!(game.players[0].lebend);
+        assert_eq!(game.nacht_opfer,None);
+    }
+
+    #[test]
+    fn nacht_aufloesung_geschuetzt_von_doktor(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+        
+        game.nacht_opfer=Some("Name1".into());
+        game.geschuetzter_von_doktor=Some("Name1".into());
+
+        game.nacht_aufloesung();
+
+        assert!(game.players[0].lebend);
+        assert_eq!(game.nacht_opfer,None);
+    }
+
+    #[test]
+    fn nacht_aufloesung_mit_zusaetzlichem_opfer(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.hexe_opfer=Some("Name1".into());
+
+        game.nacht_aufloesung();
+        assert!(!game.players[0].lebend);
+
+    }
+
+    #[test]
+    fn nacht_aufloesung_hexe_doktor(){
+        let mut game=Game::new();
+
+        game.add_player("Name1".to_string());
+        game.add_player("Name2".to_string());
+        game.add_player("Name3".to_string());
+
+        game.hexe_opfer=Some("Spieler1".into());
+        game.geschuetzter_von_doktor=Some("Spieler1".into());
+
+        assert!(!game.players[0].lebend);
+    }
+
+
 
     #[test]
     fn test_werwolf_toetet() {
