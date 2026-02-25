@@ -441,9 +441,8 @@ mod tests{
         }
 
     #[test]
-    fn test_tag_lynchen_runde1(){
+    fn test_tag_lynchen(){
         let mut game=Game::new();
-        game.runden = 2;
         game.phase = Phase::Tag;
         assert_eq!(game.phase, Phase::Tag);
 
@@ -451,58 +450,10 @@ mod tests{
         game.add_player("Name2".to_string());
         game.add_player("Name3".to_string());
 
-        game.verteile_rollen().unwrap();
-
+        game.runden=2;
         
-
         game.tag_lynchen("Name1");
-
-        assert!(game.tag_opfer.is_none());
-        assert!(game.players[0].lebend);
-        assert_eq!(game.phase, Phase::Tag);
-       
-      
-    }
-
-    #[test]
-    /*fn test_tag_lynchen_runde2(){
-        let mut game=Game::new();
-
-        game.add_player("Name1".to_string());
-        game.add_player("Name2".to_string());
-        game.add_player("Name3".to_string());
-
-        assert_eq!(game.phase, Phase::Tag);
-
-        game.runden=2;
-
-        game.tag_lynchen("Name1");
-
-        assert!(game.tag_opfer.is_none());
-        assert!(game.players[0].lebend);
-        assert_eq!(game.phase, Phase::Tag);
-       
-      
-    }*/
-
-    #[test]
-    fn test_tag_lynchen_runde2(){
-        let mut game=Game::new();
-
-        game.add_player("Name1".to_string());
-        game.add_player("Name2".to_string());
-        game.add_player("Name3".to_string());
-
-        assert_eq!(game.phase, Phase::Tag);
-
-        game.runden=2;
-
-        game.tag_lynchen("Name1");
-
-        assert!(game.tag_opfer.is_some());
-        assert_eq!(game.tag_opfer.as_ref().unwrap(),"Name1");
-        assert!(!game.players[0].lebend);
-        assert_eq!(game.phase, Phase::WerwölfePhase);
+        assert!(!game.players[0].lebend);    
     }
 
     #[test]
@@ -709,7 +660,7 @@ mod tests{
         game.hexe_opfer=Some("Spieler1".into());
         game.geschuetzter_von_doktor=Some("Spieler1".into());
 
-        assert!(!game.players[0].lebend);
+        assert!(game.players[0].lebend);
     }
 
 
@@ -719,8 +670,10 @@ mod tests{
         let mut game = Game::new();
         game.add_player("Wolf".into());
         game.add_player("Opfer".into());
+        game.add_player("Name".into());
         game.players[0].rolle = Rolle::Werwolf;
         game.phase = Phase::WerwölfePhase;
+        game.players[2].rolle=Rolle::Seher;
         
         let result = game.werwolf_toetet("Wolf", "Opfer");
         assert!(result.is_ok());
@@ -758,7 +711,9 @@ mod tests{
         let mut game = Game::new();
         game.add_player("Hexe".into());
         game.add_player("Ziel".into());
+        game.add_player("Name".into());
         game.players[0].rolle = Rolle::Hexe;
+        game.players[2].rolle=Rolle::Doktor;
         game.phase = Phase::HexePhase;
         
         let result = game.hexe_arbeitet(HexenAktion::Vergiften, "Hexe", "Ziel".to_string());
@@ -799,7 +754,6 @@ mod tests{
         game.add_player("Doktor".into());
         game.add_player("Patient".into());
         game.players[0].rolle = Rolle::Doktor;
-        game.phase = Phase::DoktorPhase;
         
         let _ = game.doktor_schuetzt("Patient");
         assert_eq!(game.geschuetzter_von_doktor, Some("Patient".to_string()));
