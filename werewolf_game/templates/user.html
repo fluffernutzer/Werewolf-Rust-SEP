@@ -606,7 +606,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-    connectWebSocket();//
     const welcomeMessage = document.getElementById("welcome-message");
     if (welcomeMessage) {
         welcomeMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -655,7 +654,8 @@ if (type === "AmorAction") {
                 actor: "{{ username }}",
                 target: "NONE",
             },
-          hexenAktion: "NichtsTun",
+          hexen_aktion: hexenAktion,
+          extra_target: "NONE",
         }
       };
     } else {
@@ -667,7 +667,7 @@ if (type === "AmorAction") {
                 actor: "{{ username }}",
                 target: "NONE",
             },
-          hexenAktion: hexenAktion,
+          hexen_aktion: hexenAktion,
           extra_target: hexenAktion === "Vergiften" ? target : "None",
         }
       };
