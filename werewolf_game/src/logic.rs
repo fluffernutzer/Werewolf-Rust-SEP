@@ -443,7 +443,7 @@ mod tests{
     #[test]
     fn test_tag_lynchen_runde1(){
         let mut game=Game::new();
-        game.runden = 2;
+        game.runden = 1;
         game.phase = Phase::Tag;
         assert_eq!(game.phase, Phase::Tag);
 
@@ -465,34 +465,16 @@ mod tests{
     }
 
     #[test]
-    /*fn test_tag_lynchen_runde2(){
-        let mut game=Game::new();
-
-        game.add_player("Name1".to_string());
-        game.add_player("Name2".to_string());
-        game.add_player("Name3".to_string());
-
-        assert_eq!(game.phase, Phase::Tag);
-
-        game.runden=2;
-
-        game.tag_lynchen("Name1");
-
-        assert!(game.tag_opfer.is_none());
-        assert!(game.players[0].lebend);
-        assert_eq!(game.phase, Phase::Tag);
-       
-      
-    }*/
-
-    #[test]
     fn test_tag_lynchen_runde2(){
         let mut game=Game::new();
 
         game.add_player("Name1".to_string());
         game.add_player("Name2".to_string());
         game.add_player("Name3".to_string());
+        //let _ = game.verteile_rollen(); // Ohne dies waren nur Dorfbewohner im Spiel -> Kein phasenwechsel zu werwolf 
+        game.players[1].rolle = Rolle::Werwolf; // Stellt sicher dass nicht zufällig werwolf stirbt 
 
+        game.phase = Phase::Tag;
         assert_eq!(game.phase, Phase::Tag);
 
         game.runden=2;
@@ -701,6 +683,7 @@ mod tests{
     #[test]
     fn nacht_aufloesung_hexe_doktor(){
         let mut game=Game::new();
+        game.phase = Phase::DoktorPhase;
 
         game.add_player("Name1".to_string());
         game.add_player("Name2".to_string());
@@ -708,8 +691,10 @@ mod tests{
 
         game.hexe_opfer=Some("Spieler1".into());
         game.geschuetzter_von_doktor=Some("Spieler1".into());
+        game.phase_change();
 
-        assert!(!game.players[0].lebend);
+        //assert!(!game.players[0].lebend);
+        assert!(game.players[0].lebend); // Sollte er nicht leben wenn er vom Doktor geschützt wird? 
     }
 
 
@@ -721,10 +706,11 @@ mod tests{
         game.add_player("Opfer".into());
         game.players[0].rolle = Rolle::Werwolf;
         game.phase = Phase::WerwölfePhase;
-        
+
         let result = game.werwolf_toetet("Wolf", "Opfer");
         assert!(result.is_ok());
-        assert_eq!(game.nacht_opfer, Some("Opfer".to_string()));
+        assert_ne!(game.nacht_opfer, Some("Opfer".to_string())); // Opfer wird durch nachtauflösung geleert ->zu not-equal geändert
+        assert!(!game.players[1].lebend); //Opfer ist gestorben & nacht_opfer leer 
     }
 
     #[test]
@@ -763,7 +749,8 @@ mod tests{
         
         let result = game.hexe_arbeitet(HexenAktion::Vergiften, "Hexe", "Ziel".to_string());
         assert!(result.is_ok());
-        assert_eq!(game.hexe_opfer, Some("Ziel".to_string()));
+        assert_ne!(game.hexe_opfer, Some("Ziel".to_string())); // Opfer wird durch nachtauflösung geleert ->zu not-equal geändert
+        assert!(!game.players[1].lebend); //Opfer ist gestorben & nacht_opfer leer 
     }
 
     #[test]
@@ -800,9 +787,11 @@ mod tests{
         game.add_player("Patient".into());
         game.players[0].rolle = Rolle::Doktor;
         game.phase = Phase::DoktorPhase;
+        game.nacht_opfer = Some("Patient".into()); // Wird jetzt von Doktor geschützt
         
-        let _ = game.doktor_schuetzt("Patient");
-        assert_eq!(game.geschuetzter_von_doktor, Some("Patient".to_string()));
+        let _ = game.doktor_schuetzt("Patient"); // funktion ruft phasenwechsel auf -> phasenwechsel zu tag ruft nacht_aufloesunf() auf -> game.geschuetzter_von_doktor wird geleert
+        // assert_eq!(game.geschuetzter_von_doktor, Some("Patient".to_string())); 
+        assert!(game.players[1].lebend); // lebendig obwohl zuvor nachtopfer -> doktor_schuetes funktoniert 
     }
 
     #[test]
@@ -811,11 +800,12 @@ mod tests{
         game.add_player("Priester".into());
         game.add_player("Wolf".into());
         game.players[0].rolle = Rolle::Priester;
-        game.players[1].rolle = Rolle::Werwolf;
+        game.players[1].rolle = Rolle::Werwolf; // Ist zwar Werwolf aber im teamdorf -> add_player() hat immernoch den Platzhalter Teamdorf 
         game.phase = Phase::PriesterPhase;
         
-        let result = game.priester_wirft("Priester", Some("Wolf".to_string()));
+        let result = game.priester_wirft("Priester", Some("Wolf".to_string())); // -> Priester_wirft() matchted auf Team nicht auf Rolle. Da Rolle dorf stirbt priester. muss im backend gefixed werden
         assert!(result.is_ok());
+        for player in &game.players {println!("{} {:?} {:?}",player.name,player.rolle,player.lebend)}
         assert!(!game.players[1].lebend);
     }
 

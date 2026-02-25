@@ -292,6 +292,7 @@ impl Game{
         }
         
         self.priester_hat_geworfen = true;
+        
 
         self.phase_change();
         Ok(())
