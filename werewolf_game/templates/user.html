@@ -5,6 +5,50 @@
   <title>Werwolf – {{ username }} ({{ rolle }})</title>
   <style>
     
+    #welcome-message {
+    background: rgba(30, 30, 30, 0.9);
+    border: 2px solid #d4af37;
+    border-radius: 12px;
+    padding: 25px;
+    margin: 20px 0;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+    position: relative;
+    z-index: 10;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+}
+
+#welcome-message h3 {
+    color: #d4af37;
+    margin-bottom: 15px;
+}
+
+#welcome-message p {
+    color: #e0e0e0;
+    margin-bottom: 20px;
+}
+
+#welcome-message button {
+    background: #4a0404;
+    border: 1px solid #d4af37;
+    color: #e0e0e0;
+    padding: 12px 25px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+#welcome-message button:hover {
+    background: #d4af37;
+    color: #0a0a0a;
+    box-shadow: 0 0 15px #d4af37;
+}
+
+
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap');
 
     * {
@@ -315,7 +359,7 @@
     {% elif rolle == "Hexe" %}
     <div class="action-box" id="hexenAktionUI">
       <h3>🧙 Hexe – Kräuter und Gifte</h3>
-      <select id="hexenAktion" onchange="toggleOpferAuswahl()">
+      <select id="hexenAction" onchange="toggleOpferAuswahl()">
         <option value="Heilen">Heilen</option>
         <option value="Vergiften">Vergiften</option>
         <option value="NichtsTun">Nichts tun</option>
@@ -332,7 +376,7 @@
 
       <input type="hidden" id="zielId" value="">
 
-      <button onclick="sendAction('HexenAktion', 'zielId')">Aktion senden</button>
+      <button onclick="sendAction('HexenAction', 'zielId')">Aktion senden</button>
     </div>
     {% elif rolle == "Amor" %}
     <div class="action-box" id="AmorAktionUI">
@@ -355,7 +399,7 @@
         </select>
       </div>
 
-      <button onclick="sendAction('AmorAktion', 'EmptyTarget')">Liebespaar verzaubern</button>
+      <button onclick="sendAction('AmorAction', 'EmptyTarget')">Liebespaar verzaubern</button>
     </div>
     {% elif rolle == "Doktor" %}
     <div class="action-box">
@@ -427,13 +471,13 @@
     <button id="lynch-button" onclick="sendAction('TagAction', 'tag-target')">Lynchen</button>
   </div>
 
-  <div style="flex: 1;">
-    <div id="welcome-message">
-      <h3>Willkommen auf deiner persönlichen Seite.</h3>
-      <p>Mach dich zunächst mit den Funktionen vertraut und wenn du bereit fürs Spiel bist, drücke bitte "Verstanden".</p>
-      <button onclick="sendAction('IngameBereit')">Verstanden</button>
+  <div style="display: flex; justify-content: center; margin-top: 20px;">
+    <div id="welcome-message" style="max-width: 500px; width: 100%;">
+        <h3>Willkommen im Spiel, {{ username }}!</h3>
+        <p>Mach dich zunächst mit deiner Rolle und den Funktionen vertraut. Wenn du bereit bist, drücke bitte "Verstanden".</p>
+        <button onclick="sendAction('IngameBereit')">Verstanden</button>
     </div>
-  </div>
+</div>
 
   <div id="voting-buttons" style="flex: 1; display: none;">
     <h3>Aktuelle Abstimmung:</h3>
@@ -535,6 +579,14 @@
       };
     }
 
+    document.addEventListener("DOMContentLoaded", function() {
+    connectWebSocket();
+    const welcomeMessage = document.getElementById("welcome-message");
+    if (welcomeMessage) {
+        welcomeMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+});
+
 function sendAction(type, targetOrId) {
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     alert("Keine Verbindung zum Server!");
@@ -558,7 +610,7 @@ function sendAction(type, targetOrId) {
   }
 
  // Amor-Aktion: "Nichts tun"
-  if (type === "AmorAction" && !targetOrId) {
+ /* if (type === "AmorAction" && !targetOrId) {
     message = {
       type: type,
       data: {
@@ -569,7 +621,7 @@ function sendAction(type, targetOrId) {
     };
   }
   // Amor-Aktion: Liebespaar verzaubern
-  else if (type === "AmorAction") {
+  else*/ if (type === "AmorAction") {
     message = {
       type: type,
       data: {
@@ -581,7 +633,7 @@ function sendAction(type, targetOrId) {
   }
   // Hexen-Aktion
   else if (type === "HexenAction") {
-    const hexenAktion = document.getElementById("hexenAktion").value;
+    const hexenAktion = document.getElementById("hexenAction").value;
     if (hexenAktion === "NichtsTun" || !targetOrId) {
       message = {
         type: type,
@@ -648,6 +700,16 @@ function sendAction(type, targetOrId) {
       data: {
         actor: "{{ username }}",
         target: null, 
+      }
+    };
+  }
+  else if (type === "PriesterAction" && targetOrId) {
+    const target = document.getElementById("priester-target").value;
+    message = {
+      type: type,
+      data: {
+        actor: "{{ username }}",
+        target: target, 
       }
     };
   }
