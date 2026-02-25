@@ -82,7 +82,7 @@ pub enum ClientMessage{
         actor: String,
         target: String,
     },
-    HexenAction{direction: ActionForm, hexenAktion:HexenAktion, extra_target: String},
+    HexenAction{direction: ActionForm, hexen_aktion:HexenAktion, extra_target: String},
     AmorAction {actor: String, target1: String, target2: String },
     DoktorAction { direction: ActionForm },
     PriesterAction { actor: String, target: Option<String> },
@@ -208,7 +208,7 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                         game.runden = 1;
                         let _ = game.verteile_rollen();
 
-                        game.phase_change();
+                        //game.phase_change();
 
                         let _ = recv_state.tx.send(serde_json::json!({
                             "type": "GAME_STARTED"
@@ -259,26 +259,32 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
 
                 ClientMessage::TagAction { direction } => {
                     if let Phase::Tag = game.phase {
+                        if game.players.iter_mut().any(|p| p.name == direction.target.clone().unwrap() && p.lebend){
                          match direction.target {
                             Some(target) => {
                                 let _ = handle_vote(&mut game, direction.actor, target, ActionKind::DorfLyncht).await;
-                            },
-                            None => log::error!("Lynch-Ziel fehlt"),
-                        } 
-                    }
+                             },
+                            None => log::error!("Lynch Ziel fehlt"),
+                        }
+                    } else {log::info!("Ziel bereits tot!")};
+
+                        }else {log::info!("Gerade kann niemand gelynched werden");
+                        }                     
                 }
 
                 ClientMessage::WerwolfAction { direction } => {
                     if let Phase::WerwölfePhase = game.phase {
-                        match direction.target {
+                        if game.players.iter_mut().any(|p| p.name == direction.target.clone().unwrap() && p.lebend){
+                            match direction.target {
                             Some(target) => {
                                 let _ = handle_vote(& mut game, direction.actor, target, ActionKind::WerwolfFrisst).await;
                             },
                             None => log::error!("Werwolf Ziel fehlt"),
                         }
-                    } else {log::info!("Werwölfe gerade nicht dran!");
-                            //return
-                        }
+                    } else {log::info!("Ziel bereits tot!")};
+
+                        }else {log::info!("Werwölfe gerade nicht dran!");
+                        }                     
                 }
 
                 ClientMessage::SeherAction { actor,target} => {
@@ -292,8 +298,8 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                         //return;
                     }
                 }
-                ClientMessage::HexenAction {direction, hexenAktion , extra_target } => {
-                            let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
+                ClientMessage::HexenAction {direction, hexen_aktion , extra_target } => {
+                            let _ = game.hexe_arbeitet(hexen_aktion, &direction.actor ,extra_target);
                         }
                 ClientMessage::AmorAction { actor, target1, target2 } =>{
                     if let Phase::AmorPhase = game.phase{
@@ -683,7 +689,7 @@ impl FromStr for ClientMessage {
             };
             Ok(ClientMessage::HexenAction {
                 direction: ActionForm { actor: actor.to_string(), target: Some("None".to_string()) },
-                hexenAktion: hexenaktion,extra_target: extra_target.to_string(),
+                hexen_aktion: hexenaktion,extra_target: extra_target.to_string(),
             })},
             ["Amor", actor, target1, target2] => Ok(ClientMessage::AmorAction {
                 actor: actor.to_string(),
@@ -777,8 +783,8 @@ async fn test_Client_message_ACTION_handling(
                         return;
                     }
                 }
-                ClientMessage::HexenAction {direction, hexenAktion , extra_target } => {
-                            let _ = game.hexe_arbeitet(hexenAktion, &direction.actor ,extra_target);
+                ClientMessage::HexenAction {direction, hexen_aktion , extra_target } => {
+                            let _ = game.hexe_arbeitet(hexen_aktion, &direction.actor ,extra_target);
                         }
                 ClientMessage::AmorAction { actor, target1, target2 } =>{
                     if let Phase::AmorPhase = game.phase{
@@ -815,8 +821,6 @@ async fn test_Client_message_ACTION_handling(
 
 
 #[tokio::test]
-
-
     async fn test_game_one_werwolf_winner  () {
         let state = AppState {
         tx: broadcast::channel(10).0,
