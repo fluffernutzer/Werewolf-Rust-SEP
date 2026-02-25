@@ -4,6 +4,16 @@
   <meta charset="utf-8">
   <title>Werwolf – {{ username }} ({{ rolle }})</title>
   <style>
+
+    @keyframes highlightPhase {
+    0% { background-color: rgba(139, 0, 0, 0.3); color: #d4af37; }
+    50% { background-color: rgba(139, 0, 0, 0.8); color: #ffffff; text-shadow: 0 0 10px #ffeb3b; }
+    100% { background-color: rgba(139, 0, 0, 0.3); color: #d4af37; }
+}
+
+.phase-highlight {
+    animation: highlightPhase 1.5s ease-in-out;
+}
     
     #welcome-message {
     background: rgba(30, 30, 30, 0.9);
@@ -325,7 +335,7 @@
     </ul>
 
     <div class="phase-info">
-      <strong>aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
+      <strong>Aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
     </div>
 
     {% if rolle == "Werwolf" %}
@@ -530,6 +540,22 @@
             .join("");
           document.getElementById("phase").textContent = data.state.phase;
 
+          if (
+                (data.state.phase === "WerwölfePhase" && "{{ rolle }}" === "Werwolf") ||
+                (data.state.phase === "SeherPhase" && "{{ rolle }}" === "Seher") ||
+                (data.state.phase === "AmorPhase" && "{{ rolle }}" === "Amor") || 
+                (data.state.phase === "DoktorPhase" && "{{ rolle }}" === "Doktor") ||
+                (data.state.phase === "PriesterPhase" && "{{ rolle }}" === "Priester") ||
+                (data.state.phase === "HexePhase" && "{{ rolle }}" === "Hexe") ||
+                (data.state.phase === "Tag") 
+            ) {
+                const phaseElement = document.getElementById("phase");
+                phaseElement.classList.add("phase-highlight");
+                setTimeout(() => {
+                    phaseElement.classList.remove("phase-highlight");
+                }, 1500);
+            }
+
           const votingButtonsDiv = document.getElementById("voting-buttons");
           const votingOptionsDiv = document.getElementById("voting-options");
 
@@ -580,7 +606,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-    connectWebSocket();
+    connectWebSocket();//
     const welcomeMessage = document.getElementById("welcome-message");
     if (welcomeMessage) {
         welcomeMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -608,20 +634,7 @@ function sendAction(type, targetOrId) {
     document.getElementById('welcome-message').style.display = 'none';
     return;
   }
-
- // Amor-Aktion: "Nichts tun"
- /* if (type === "AmorAction" && !targetOrId) {
-    message = {
-      type: type,
-      data: {
-        actor: "{{ username }}",
-        target1: null,  // null für Option<String>::None
-        target2: null,  // null für Option<String>::None
-      }
-    };
-  }
-  // Amor-Aktion: Liebespaar verzaubern
-  else*/ if (type === "AmorAction") {
+if (type === "AmorAction") {
     message = {
       type: type,
       data: {
@@ -693,6 +706,16 @@ function sendAction(type, targetOrId) {
       }
     };
   }
+  else if (type === "JaegerAction" && targetOrId) {
+    const target = document.getElementById("jaeger-target").value;
+    message = {
+      type: type,
+      data: {
+        actor: "{{ username }}",
+        target: target,  
+      }
+    };
+  }
   // Priester-Aktion: "Nichts tun"
   else if (type === "PriesterAction" && !targetOrId) {
     message = {
@@ -714,7 +737,6 @@ function sendAction(type, targetOrId) {
     };
   }
   else if (type === "WerwolfAction") {
-    // Wenn targetOrId ein String ist (z. B. "Max Mustermann"), direkt verwenden
     const target = (typeof targetOrId === "string" && targetOrId !== "werwolf-target")
       ? targetOrId
       : document.getElementById("werwolf-target").value;
@@ -729,7 +751,6 @@ function sendAction(type, targetOrId) {
     };
   }
   else if (type === "TagAction") {
-    // Wenn targetOrId ein String ist (z. B. "Max Mustermann"), direkt verwenden
     const target = (typeof targetOrId === "string" && targetOrId !== "tag-target")
       ? targetOrId
       : document.getElementById("tag-target").value;
@@ -743,7 +764,6 @@ function sendAction(type, targetOrId) {
       }
     };
   }
-  // Standardfall für alle anderen Aktionen mit Target
   else {
     const target = typeof targetOrId === "string" ? document.getElementById(targetOrId).value : targetOrId;
     message = {
@@ -751,7 +771,7 @@ function sendAction(type, targetOrId) {
       data: {
         direction: {
           actor: "{{ username }}",
-          target: target,  // String für Option<String>::Some
+          target: target,  
         }
       }
     };
@@ -784,9 +804,9 @@ function appendChatMessage(sender, message) {
 }
 
 function toggleOpferAuswahl() {
-  const hexenAktion = document.getElementById("hexenAktion").value;
+  const hexenAction = document.getElementById("hexenAction").value;
   const opferAuswahl = document.getElementById("opferAuswahl");
-  if (hexenAktion === "Vergiften") {
+  if (hexenAction === "Vergiften") {
     opferAuswahl.style.display = "block";
     updateZielId();
   } else {

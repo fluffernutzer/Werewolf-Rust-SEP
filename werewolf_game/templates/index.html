@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <title>Werwolf – vertraue niemandem!</title>
+  <title>Werwolf – Vertraue niemandem!</title>
   <style>
     
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap');
@@ -195,7 +195,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>🐺 Werwolf – vertraue niemandem!</h1>
+    <h1>🐺 Werwolf – Vertraue niemandem!</h1>
     <p class="subtitle">Betritt die Welt der Schatten und denke daran: Nicht jeder ist, was er vorgibt zu sein.</p>
 
     <form onsubmit="event.preventDefault(); addUser();" class="name-form">
@@ -219,13 +219,13 @@
           {% else %}
             <span class="status dead">💀 tot</span>
           {% endif %}
-          <button onclick="setReady('{{ player.name }}', true)" class="ready-btn">bereit!</button>
+          <button onclick="setReady('{{ player.name }}', true)" class="ready-btn">Bereit!</button>
         </li>
       {% endfor %}
     </ul>
 
     <div class="phase-info">
-      <strong>aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
+      <strong>Aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
       <button onclick="reset_game()" class="reset-btn">🔄 Spiel neu beginnen</button>
     </div>
   </div>

@@ -208,7 +208,7 @@ pub async fn handle_message( state: &AppState,client_message: ClientMessage,clie
                         game.runden = 1;
                         let _ = game.verteile_rollen();
 
-                        game.phase_change();
+                        //game.phase_change();
 
                         let _ = recv_state.tx.send(serde_json::json!({
                             "type": "GAME_STARTED"
