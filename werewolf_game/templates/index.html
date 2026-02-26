@@ -223,10 +223,15 @@
         </li>
       {% endfor %}
     </ul>
-
+    <div style="text-align:center; margin-top:15px;">
+      <button onclick="setAllReady()" class="button">
+        ✅ Alle Spieler bereit setzen
+      </button>
+    </div>
     <div class="phase-info">
       <strong>Aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
       <button onclick="reset_game()" class="reset-btn">🔄 Spiel neu beginnen</button>
+      <button onclick="shutdownServer()" class="stop_btn">🛑 Spiel beenden</button>
     </div>
   </div>
 
@@ -281,27 +286,44 @@
       };
     }
 
-function addUser() {
-  const username = document.getElementById("username").value.trim();
-  if (!username) {
-    alert("Bitte gib einen Namen ein!");
-    return;
-  }
-  localPlayers.push(username);
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ type: "AddUser", data: { username: username } }));
-    document.getElementById("username").value = "";
-  }
-}
+    function addUser() {
+      const username = document.getElementById("username").value.trim();
+      if (!username) {
+        alert("Bitte gib einen Namen ein!");
+        return;
+      }
+      localPlayers.push(username);
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "AddUser", data: { username: username } }));
+        document.getElementById("username").value = "";
+      }
+    }
 
-function setReady(username, ready) {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({
-      type: "ReadyStatus",
-      data: { username: username, ready: ready }
-    }));
-  }
-}
+    function setReady(username, ready) {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: "ReadyStatus",
+          data: { username: username, ready: ready }
+        }));
+      }
+    }
+    function setAllReady() {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("Keine Verbindung zum Server!");
+        return;
+      }
+      const userElements = document.querySelectorAll("#users .player-name");
+      userElements.forEach(el => {
+        const username = el.textContent;
+        socket.send(JSON.stringify({
+          type: "ReadyStatus",
+          data: {
+            username: username,
+            ready: true
+          }
+        }));
+      });
+    }
 
     function startGame() {
       if (socket && socket.readyState === WebSocket.OPEN) {
@@ -311,12 +333,26 @@ function setReady(username, ready) {
       }
     }
 
+
     function reset_game(){
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({type: "ResetGame"}));
       } else {
         alert("Keine Verbindung zum Server!");
       }
+    }
+    function shutdownServer() {
+      if (!confirm("Bist du sicher? Das beendet das Spiel für alle!")) {
+        return;
+      }
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("Keine Verbindung zum Server!");
+        return;
+      }
+      socket.send(JSON.stringify({ type: "EndGame" }));
+      socket.close();
+
+      alert("Server und Spiel werden beendet. Du kannst das Fenster schließen.");
     }
 
     document.addEventListener("DOMContentLoaded", connectWebSocket);

@@ -338,7 +338,7 @@
       <strong>Aktuelle Phase:</strong> <span id="phase">{{ phase }}</span>
     </div>
 
-    {% if rolle == "Werwolf" %}
+    {% if rolle == "Werwolf"  %}
     <div class="action-box">
       <h3>🐺 Werwolf – Töter im Mondlicht</h3>
       <p>Wähle ein Opfer, das diese Nacht sterben soll:</p>
@@ -531,6 +531,10 @@
         const data = JSON.parse(event.data);
         if (data.type === "GAME_RESET") {
                 alert("Das Spiel wurde zurückgesetzt. Bitte neu beitreten.")
+                socket.close();
+            }
+        if (data.type === "GAME_END") {
+                alert("Das Spiel wurde beendet. Du kannst die Seite schließen.")
                 socket.close();
             }
         if (data.type === "GAME_STATE") {
