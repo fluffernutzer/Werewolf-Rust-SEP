@@ -8,7 +8,7 @@ use axum::{
     Router,
     //extract::{Form, Path, State},
     //response::{Html, Json, Redirect},
-    routing::{get},
+    routing::get,
 };
 //use image::Luma;
 use local_ip_address::local_ip;
@@ -19,7 +19,7 @@ use std::sync::Arc;
 use tokio::{
     //fs,
     //io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener},
+    net::TcpListener,
     sync::{Mutex, broadcast},
 };
 //use urlencoding::encode;
@@ -46,6 +46,7 @@ struct AppState {
     server_ip: String,
     play_dev: Arc<Mutex<Vec<PlayerDevice>>>,
     tx: broadcast::Sender<String>,
+    endgame_signal: Arc<Mutex<Option<tokio::sync::oneshot::Sender<()>>>>,
 }
 //#[derive(Deserialize)]
 /*struct ActionForm {
@@ -58,18 +59,19 @@ struct AppState {
 
 async fn main() {
     let (tx, _rx) = broadcast::channel(32);
+    let (endgame_tx, endgame_rx) = tokio::sync::oneshot::channel::<()>();
     let ip = local_ip().unwrap().to_string();
     let tx_1 = tx.clone();
-    let logger = ClientLogger { tx: tx_1};
-    log::set_boxed_logger(Box::new(logger))
-        .expect("Logger konnte nicht gesetzt werden");
-    log::set_max_level(LevelFilter::Info); 
+    let logger = ClientLogger { tx: tx_1 };
+    log::set_boxed_logger(Box::new(logger)).expect("Logger konnte nicht gesetzt werden");
+    log::set_max_level(LevelFilter::Info);
     let state = AppState {
         game: Arc::new(Mutex::new(Game::new())),
         game_started: Arc::new(Mutex::new(false)),
         tx,
         server_ip: ip.clone(),
         play_dev: Arc::new(Mutex::new(Vec::new())),
+        endgame_signal: Arc::new(Mutex::new(Some(endgame_tx))),
     };
     let app = Router::new()
         .route("/", get(ws::index))
@@ -82,7 +84,13 @@ async fn main() {
     log::info!("Server läuft auf http://127.0.0.1:7878");
     let listener = TcpListener::bind("0.0.0.0:7878").await.unwrap();
 
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            let _ = endgame_rx.await;
+            log::info!("EndGame-Signal empfangen.")
+        })
+        .await
+        .unwrap();
 }
 
 fn generate_qr(ip: &str) -> String {
@@ -98,13 +106,13 @@ struct ClientLogger {
 }
 
 impl log::Log for ClientLogger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
-        true 
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
     }
 
     fn log(&self, record: &log::Record) {
         let message = format!("{}", record.args());
-        println!("{}", message); 
+        println!("{}", message);
         let chat_message = serde_json::json!({
             "type": "CHAT_MESSAGE",
             "data": {
