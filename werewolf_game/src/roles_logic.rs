@@ -210,11 +210,11 @@ impl Game {
         self.amor_hat_gewaehlt = true;
         self.phase_change();
 
-        log::info!(
+        /*log::info!(
             "Amor hat '{}' und '{}' zu Liebenden gemacht!",
             target_1,
             target_2
-        );
+        ); */
         Ok(())
     }
 

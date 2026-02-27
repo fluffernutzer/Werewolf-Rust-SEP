@@ -300,6 +300,7 @@
         {% endif %}
       </span>
       {{ username }} ({{ rolle }})
+      <span class="love-icon" style="display: none;">❤️</span>
     </h1>
 
     <div class="role-description">
@@ -543,6 +544,19 @@
             .map(p => `<li>${p.name} <span class="status ${p.status ? 'alive' : 'dead'}">${p.status ? '❤️ lebendig' : '💀 tot'}</span></li>`)
             .join("");
           document.getElementById("phase").textContent = data.state.phase;
+
+          // Prüfe, ob der aktuelle Spieler Liebender ist
+            const username = "{{ username }}"; // Template-Variable
+            const isLiebender =
+            (data.state.liebender1 && data.state.liebender1 === username) ||
+            (data.state.liebender2 && data.state.liebender2 === username);
+
+            // Zeige/verstecke das Herz-Icon
+            const loveIcon = document.querySelector('.love-icon');
+            if (loveIcon) {
+            loveIcon.style.display = isLiebender ? 'inline' : 'none';
+            }
+
 
           if (
                 (data.state.phase === "WerwölfePhase" && "{{ rolle }}" === "Werwolf") ||
@@ -823,6 +837,7 @@ function updateZielId() {
   const opferId = document.getElementById("opferId").value;
   document.getElementById("zielId").value = opferId;
 }
+
 
 
     function showWinnerPage(winner) {
