@@ -753,13 +753,18 @@ mod tests {
         let mut game = Game::new();
         game.add_player("Priester".into());
         game.add_player("Wolf".into());
+        
         game.players[0].rolle = Rolle::Priester;
+        game.players[0].team = game.players[0].rolle.team(); // Team setzen
         game.players[1].rolle = Rolle::Werwolf;
+        game.players[1].team = game.players[1].rolle.team(); // Team setzen
+        
         game.phase = Phase::PriesterPhase;
 
         let result = game.priester_wirft("Priester", Some("Wolf".to_string()));
         assert!(result.is_ok());
-        assert!(!game.players[1].lebend);
+        assert!(!game.players[1].lebend); // Werwolf ist tot
+        assert!(game.players[0].lebend);  // Priester lebt (optional)
     }
 
     #[test]
