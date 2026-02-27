@@ -1,5 +1,3 @@
-//use std::io;
-//use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Rolle {

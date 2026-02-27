@@ -1,6 +1,5 @@
 use crate::logic::{Game, Phase};
 use crate::roles::Rolle;
-//use std::io;
 
 impl Game {
     pub fn has_role(&self, rolle: Rolle) -> bool {
@@ -155,26 +154,3 @@ impl Game {
     }
 }
 
-/* pub fn check_win(game: &Game) -> Option<String> {
-    let mut dorf = 0;
-    let mut wolfs = 0;
-
-    for p in &game.players {
-        if p.lebend {
-            match p.rolle {
-                Rolle::Werwolf => wolfs += 1,
-                _ => dorf += 1,
-            }
-        }
-    }
-
-    if wolfs == 0 {
-        return Some("Dorf gewinnt".to_string());
-    }
-
-    if wolfs >= dorf {
-        return Some("Werwölfe gewinnen".to_string());
-    }
-
-    None
-} */
