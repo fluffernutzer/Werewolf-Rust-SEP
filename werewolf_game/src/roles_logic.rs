@@ -45,9 +45,7 @@ impl Game {
         }
 
         log::info!("(NACHT) Werwölfe greifen {} an", victim_name);
-        //println!("(NACHT) Werwölfe greifen {} an", victim_name);
         self.nacht_opfer = Some(victim_name.to_string());
-        //self.werwoelfe_done=true;
         self.phase_change();
         Ok(())
     }
@@ -87,10 +85,8 @@ impl Game {
         }
 
         log::info!("(NACHT) Seher überprüft {}", target_name);
-        //println!("(NACHT) Seher überprüft {}", target_name);
 
         seher.bereits_gesehen = true;
-        //self.seher_done=true;
 
         self.phase_change();
         Ok(target_rolle)
@@ -126,7 +122,6 @@ impl Game {
                 let opfer_name = self.nacht_opfer.as_ref().ok_or("Es gibt kein Opfer.")?;
 
                 self.heiltrank_genutzt = true;
-                //self.hexe_done=true;
                 self.geheilter_von_hexe = Some(opfer_name.to_string());
                 self.phase_change();
                 Ok(())
@@ -154,14 +149,12 @@ impl Game {
                 self.hexe_opfer = Some(extra_target.to_string());
                 self.bereits_getoetet = true;
                 log::info!("Hexe tötet noch dazu: {}", extra_target);
-                //println!("Hexe tötet noch dazu: {}", extra_target);
                 self.phase_change();
                 Ok(())
             }
 
             HexenAktion::NichtsTun => {
                 log::info!("Hexe tut nichts.");
-                //println!("Hexe tut nichts.");
                 self.phase_change();
                 Ok(())
             }
@@ -186,7 +179,6 @@ impl Game {
             Some(i) => i,
             None => {
                 log::error!("Spieler {} exisitiert nicht", target_1);
-                //println!("Spieler {} exisitiert nicht",target_1);
                 return Err("Spieler existiert nicht".into());
             }
         };
@@ -194,7 +186,6 @@ impl Game {
             Some(i) => i,
             None => {
                 log::error!("Der Spieler {} existiert nicht", target_2);
-                //println!("Der Spieler {} existiert nicht",target_2);
                 return Err("Spieler existiert nicht.".into());
             }
         };
@@ -213,10 +204,6 @@ impl Game {
                 player.team = Team::TeamLiebende;
             }
         }
-
-        //self.players[index1].team=Team::TeamLiebende;
-        //self.players[index2].team=Team::TeamLiebende;
-
         self.liebender_1 = Some(target_1.to_string());
         self.liebender_2 = Some(target_2.to_string());
         self.liebende_aktiv = true;
@@ -227,8 +214,7 @@ impl Game {
             "Amor hat '{}' und '{}' zu Liebenden gemacht!",
             target_1,
             target_2
-        );*/
-        //println!("Amor hat '{}' und '{}' zu Liebenden gemacht!", target_1, target_2);
+        ); */
         Ok(())
     }
 
@@ -255,7 +241,7 @@ impl Game {
         }
 
         self.geschuetzter_von_doktor = Some(geschuetzter_name.to_string());
-        self.phase_change(); //Nötig um im Spiel voran zukommen? 
+        self.phase_change(); 
         Ok(())
     }
 

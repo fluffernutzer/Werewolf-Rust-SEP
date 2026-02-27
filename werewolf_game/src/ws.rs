@@ -9,15 +9,8 @@ use axum::{
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-//use std::{os::macos::raw::stat, sync::Arc};
 use base64::{Engine as _, engine::general_purpose};
-//use std::{fs, str::FromStr, sync::Arc};
-//use qrcode::QrCode;
-//use std::sync::Arc;
 use tokio::sync::mpsc;
-//use urlencoding::encode;
-//use webbrowser;
-
 use crate::{
     AppState, PlayerDevice, generate_qr,
     logic::{Game, HexenAktion, Phase},
@@ -31,11 +24,6 @@ struct IndexTemplate<'a> {
     phase: String,
     qr_code: String,
 }
-/*#[derive(Template)]
-#[template(path = "winner.html")]
-pub struct WinnerTemplate {
-    winner: String,
-}*/
 #[derive(Template)]
 #[template(path = "user.html")]
 struct UserTemplate<'a> {
@@ -57,7 +45,6 @@ struct PlayerTemplate<'a> {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "data")]
-
 pub enum ClientMessage {
     StartGame,
     ResetGame,
@@ -119,17 +106,16 @@ pub struct ActionForm {
 pub enum ActionKind {
     DorfLyncht,
     WerwolfFrisst,
-    //SeherSieht,
-    //HexeHext,
 }
+
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
+
 async fn handle_socket(socket: WebSocket, state: AppState) {
+
     let (mut sender, mut receiver) = socket.split();
-
     let (client_tx, mut client_rx) = mpsc::unbounded_channel::<String>();
-
     let mut rx = state.tx.subscribe();
 
     let send_task = tokio::spawn(async move {
@@ -152,10 +138,9 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     });
 
     let recv_state = state.clone();
+
     let recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(text))) = receiver.next().await {
-            //println!("Client Message: {}", text);
-
             let Ok(client_message) = serde_json::from_str::<ClientMessage>(&text) else {
                 eprintln!("Ungültige Nachricht");
                 continue;
@@ -174,15 +159,12 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
 
     let _ = tokio::join!(send_task, recv_task);
 }
-pub async fn handle_message(
-    state: &AppState,
-    client_message: ClientMessage,
-    client_tx: &mpsc::UnboundedSender<String>,
-) -> Result<(), String> {
+pub async fn handle_message(state: &AppState,client_message: ClientMessage,client_tx: &mpsc::UnboundedSender<String>,) -> Result<(), String> {
     let mut game = state.game.lock().await;
     let recv_state = state.clone();
 
     match client_message {
+
         ClientMessage::StartGame => {
             if !*recv_state.game_started.lock().await {
                 *recv_state.game_started.lock().await = true;
@@ -199,9 +181,9 @@ pub async fn handle_message(
                 );
             }
         }
+
         ClientMessage::ResetGame => {
             println!("Starte zrücksetzen");
-            //let mut game = state.game.lock().await;
             *game = Game::new();
             let mut game_started = state.game_started.lock().await;
             *game_started = false;
@@ -215,6 +197,7 @@ pub async fn handle_message(
             );
             println!("Zurüclsetzen beendet");
         }
+
         ClientMessage::EndGame => {
             println!("Beende Spiel und Server");
             let _ = recv_state.tx.send(
@@ -242,9 +225,6 @@ pub async fn handle_message(
                 game.phase = Phase::Spielbeginn;
                 game.runden = 1;
                 let _ = game.verteile_rollen();
-
-                //game.phase_change();
-
                 let _ = recv_state.tx.send(
                     serde_json::json!({
                         "type": "GAME_STARTED"
@@ -253,6 +233,7 @@ pub async fn handle_message(
                 );
             }
         }
+
         ClientMessage::IngameBereit { username, ready } => {
             if game.phase == Phase::Spielbeginn {
                 if let Some(player) = game.players.iter_mut().find(|p| p.name == username) {
@@ -266,14 +247,16 @@ pub async fn handle_message(
                 log::error!("Spieler bereits alle bereit")
             }
         }
+
         ClientMessage::AddUser { username } => {
             if *state.game_started.lock().await {
                 log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
-                //return //Err("Aktuell können keine Spieler mehr der Runde beitreten");
             }
             if game.players.iter().any(|p| p.name == username) {
                 return Err("Name existiert bereits".to_string());
             }
+            if *state.game_started.lock().await {
+                log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
             if game.players.len() == 16 {
                 //log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
                 return Err("Die Runde ist bereits voll".to_string());
@@ -357,9 +340,9 @@ pub async fn handle_message(
                 }
             } else {
                 log::info!("Seher gerade nicht dran");
-                //return;
             }
         }
+
         ClientMessage::HexenAction {
             direction,
             hexen_aktion,
@@ -367,6 +350,7 @@ pub async fn handle_message(
         } => {
             let _ = game.hexe_arbeitet(hexen_aktion, &direction.actor, extra_target);
         }
+
         ClientMessage::AmorAction {
             actor: _,
             target1,
@@ -378,6 +362,7 @@ pub async fn handle_message(
                 log::info!("Amor gerade nicht dran")
             }
         }
+
         ClientMessage::DoktorAction { direction } => {
             if game.phase == Phase::DoktorPhase {
                 match direction.target {
@@ -393,9 +378,11 @@ pub async fn handle_message(
                 log::error!("Doktor gerade nicht dran")
             }
         }
+
         ClientMessage::PriesterAction { actor, target } => {
             let _ = game.priester_wirft(&actor, target);
         }
+
         ClientMessage::JaegerAction { actor: _, target } => {
             game.jaeger_ziel = target;
         }
@@ -417,6 +404,7 @@ pub async fn send_game_state(state: &AppState) {
     let game = state.game.lock().await;
     let game_started = state.game_started.lock().await;
     let win = game.check_win();
+
     let message = json!({
         "type": "GAME_STATE",
         "state": {
@@ -445,12 +433,9 @@ pub async fn send_game_state(state: &AppState) {
 
     let message_str =
         serde_json::to_string(&message).expect("Fehler beim Serialisieren des GameState");
-    //println!("Sende GameState: {}", message_str); // Debug-Ausgabe
     let _ = state.tx.send(message_str);
 
-    if let Some(winner) = win
-        && *game_started
-    {
+    if let Some(winner) = win && *game_started {
         let winner_message = json!({
             "type": "WINNER",
             "winner": format!("{:?}", winner)
@@ -493,10 +478,7 @@ pub async fn index(State(state): State<AppState>) -> Html<String> {
     Html(template.render().unwrap())
 }
 
-pub async fn show_user(
-    Path(username): Path<String>,
-    State(state): State<AppState>,
-) -> Html<String> {
+pub async fn show_user(Path(username): Path<String>,State(state): State<AppState>,) -> Html<String> {
     let game = state.game.lock().await;
 
     let rolle = match game.rolle_von(&username) {
@@ -545,12 +527,7 @@ pub async fn show_user(
     Html(template.render().unwrap())
 }
 
-async fn handle_vote(
-    game: &mut Game,
-    actor: String,
-    target: String,
-    action: ActionKind,
-) -> Result<(), String> {
+async fn handle_vote(game: &mut Game,actor: String,target: String,action: ActionKind) -> Result<(), String> {
     if let Some(_player) = game.players.iter_mut().find(|p| p.name == target) {
         if let Some(_player) = game
             .players
@@ -630,8 +607,6 @@ async fn handle_vote(
                     }
                 },
                 ActionKind::DorfLyncht => game.tag_lynchen(&final_target),
-                //ActionKind::HexeHext => (),
-                //ActionKind::SeherSieht => (),
             }
             game.votes.clear();
             for player in game.players.iter_mut() {
@@ -646,24 +621,14 @@ async fn handle_vote(
 
     Ok(())
 }
-/*#[derive(Deserialize)]
-pub struct WinnerParams {
-    winner: String,
-}
 
-pub async fn winner_page(Query(params): Query<WinnerParams>) -> Html<String> {
-    let template = WinnerTemplate { winner: params.winner };
-    Html(template.render().unwrap())
-}*/
 pub async fn join_page() -> Html<String> {
     let template = JoinTemplate {};
     Html(template.render().unwrap())
 }
+
 pub async fn play_page(Path(token): Path<String>, State(state): State<AppState>) -> Html<String> {
     let play_dev = state.play_dev.lock().await;
-
-    // Spieler anhand des Tokens finden
-
     if let Some(player) = play_dev.iter().find(|p| p.token == token) {
         let game = state.game.lock().await;
 
@@ -675,8 +640,8 @@ pub async fn play_page(Path(token): Path<String>, State(state): State<AppState>)
                 Rolle::Hexe => "Hexe",
                 Rolle::Amor => "Amor",
                 Rolle::Jäger => "Jäger",
-                Rolle::Priester => "Priester", // Hoffe OK?
-                Rolle::Doktor => "Doktor",     // Hoffe OK?
+                Rolle::Priester => "Priester", 
+                Rolle::Doktor => "Doktor",    
                 _ => "Dorfbewohner",
             },
             None => "?",
@@ -695,8 +660,8 @@ pub async fn play_page(Path(token): Path<String>, State(state): State<AppState>)
                         Rolle::Hexe => "Hexe",
                         Rolle::Amor => "Amor",
                         Rolle::Jäger => "Jäger",
-                        Rolle::Priester => "Priester", // Hoffe OK?
-                        Rolle::Doktor => "Doktor",     // Hoffe OK?
+                        Rolle::Priester => "Priester", 
+                        Rolle::Doktor => "Doktor",     
                         _ => "Dorfbewohner",
                     },
                     None => "?",
@@ -722,7 +687,6 @@ pub async fn play_page(Path(token): Path<String>, State(state): State<AppState>)
 mod tests {
     use super::*;
     use tokio::sync::{Mutex, broadcast};
-    //use std::sync::Arc;
     use crate::logic::{Spieler, Winner};
     use std::{fs, str::FromStr, sync::Arc};
     #[tokio::test]
@@ -1045,7 +1009,7 @@ mod tests {
                     }
                 } else {
                     log::info!("Werwölfe gerade nicht dran!");
-                    //return
+                    
                 }
             }
 

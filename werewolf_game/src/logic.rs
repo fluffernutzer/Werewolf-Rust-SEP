@@ -66,19 +66,8 @@ pub struct Game {
     pub amor_hat_gewaehlt: bool,
     pub jaeger_ziel: Option<String>,
     pub last_seher_result: Option<(String, Rolle)>,
-    //pub amor_done:bool,
-    //pub werwoelfe_done:bool,
-    //pub seher_done:bool,
-    //pub hexe_done:bool,
-    //pub hexe_done:bool,
-    //pub abstimmung_done:bool,
     pub geschuetzter_von_doktor: Option<String>,
     pub priester_hat_geworfen: bool,
-    //pub abstimmung_done:bool,
-
-    //pub abstimmung_done:bool,
-
-    //pub abstimmung_done:bool,
     pub votes: HashMap<String, Vec<String>>,
     pub eligible_players: Vec<String>,
     pub current_votes: HashMap<String, Vec<String>>,
@@ -91,20 +80,6 @@ pub enum Winner {
     Werwolf,
     Liebende,
 }
-
-/*impl Spieler {
-    pub fn new(name: String, _team: Team, rolle: Rolle, _lebend:bool) -> Self {
-        Spieler {
-            name,
-            team: rolle.team(),
-            rolle,
-            lebend:true,
-            bereits_gesehen:false,
-            ready_state:false,
-            has_voted:false,
-        }
-    }
-}*/
 
 impl Game {
     pub fn new() -> Self {
@@ -124,15 +99,8 @@ impl Game {
             amor_hat_gewaehlt: false,
             jaeger_ziel: None,
             last_seher_result: None,
-            //amor_done:false,
-            //werwoelfe_done:false,
-            //seher_done:false,
-            ////hexe_done:false,
-            //abstimmung_done:false,
             geschuetzter_von_doktor: None,
             priester_hat_geworfen: false,
-            ////abstimmung_done:false,
-            //
             votes: HashMap::new(),
             eligible_players: Vec::new(),
             current_votes: HashMap::new(),
@@ -247,13 +215,11 @@ impl Game {
         let player = self.players.iter_mut().find(|p| p.name == verstorbener);
         if player.is_none() {
             log::info!("Spieler {}existiert nicht", verstorbener);
-            //println!("Spieler {}existiert nicht", verstorbener);
             return;
         }
         let victim = player.unwrap();
         if !victim.lebend {
             log::info!("spieler bereits tot.");
-            //println!("spieler bereits tot.");
             return;
         }
 
@@ -263,16 +229,12 @@ impl Game {
 
         if victim.rolle == Rolle::Jäger {
             log::info!("{} war der Jäger und schießt nun.", verstorbener);
-            //println!("{} war der Jäger und schießt nun.", verstorbener);
-            //brauche ziel vom frontend
 
             if let Some(ziel) = self.jaeger_ziel.clone() {
                 log::info!("Der Jäger erschießt {}.", ziel);
-                //println!("Der Jäger erschießt {}.",ziel);
                 self.spieler_stirbt(&ziel);
             } else {
                 log::info!("Der Jäger hat niemanden ausgewählt.");
-                //println!("Der Jäger hat niemanden ausgewählt.");
             }
         }
 
