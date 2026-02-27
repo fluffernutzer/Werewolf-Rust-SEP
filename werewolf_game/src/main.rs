@@ -43,9 +43,11 @@ async fn main() {
     let (endgame_tx, endgame_rx) = tokio::sync::oneshot::channel::<()>();
     let ip = local_ip().unwrap().to_string();
     let tx_1 = tx.clone();
+    
     let logger = ClientLogger { tx: tx_1 };
     log::set_boxed_logger(Box::new(logger)).expect("Logger konnte nicht gesetzt werden");
     log::set_max_level(LevelFilter::Info);
+
     let state = AppState {
         game: Arc::new(Mutex::new(Game::new())),
         game_started: Arc::new(Mutex::new(false)),
@@ -54,6 +56,7 @@ async fn main() {
         play_dev: Arc::new(Mutex::new(Vec::new())),
         endgame_signal: Arc::new(Mutex::new(Some(endgame_tx))),
     };
+
     let app = Router::new()
         .route("/", get(ws::index))
         .route("/join", get(ws::join_page))
@@ -77,6 +80,7 @@ async fn main() {
 fn generate_qr(ip: &str) -> String {
     let url = format!("http://{}:7878/join", ip);
     let code = QrCode::new(url.as_bytes()).unwrap();
+
     code.render::<qrcode::render::svg::Color>()
         .min_dimensions(220, 220)
         .build()
@@ -87,6 +91,7 @@ struct ClientLogger {
 }
 
 impl log::Log for ClientLogger {
+
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
         true
     }
@@ -94,6 +99,7 @@ impl log::Log for ClientLogger {
     fn log(&self, record: &log::Record) {
         let message = format!("{}", record.args());
         println!("{}", message);
+
         let chat_message = serde_json::json!({
             "type": "CHAT_MESSAGE",
             "data": {
@@ -101,6 +107,7 @@ impl log::Log for ClientLogger {
                 "message": message,
             }
         });
+
         let chat_message_str = serde_json::to_string(&chat_message)
             .expect("Fehler beim Serialisieren der Chat-Nachricht");
         let _ = self.tx.send(chat_message_str);

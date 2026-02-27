@@ -45,7 +45,6 @@ struct PlayerTemplate<'a> {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "data")]
-
 pub enum ClientMessage {
     StartGame,
     ResetGame,
@@ -108,14 +107,15 @@ pub enum ActionKind {
     DorfLyncht,
     WerwolfFrisst,
 }
+
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
+
 async fn handle_socket(socket: WebSocket, state: AppState) {
+
     let (mut sender, mut receiver) = socket.split();
-
     let (client_tx, mut client_rx) = mpsc::unbounded_channel::<String>();
-
     let mut rx = state.tx.subscribe();
 
     let send_task = tokio::spawn(async move {
@@ -138,6 +138,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     });
 
     let recv_state = state.clone();
+
     let recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(text))) = receiver.next().await {
             let Ok(client_message) = serde_json::from_str::<ClientMessage>(&text) else {
@@ -158,15 +159,12 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
 
     let _ = tokio::join!(send_task, recv_task);
 }
-pub async fn handle_message(
-    state: &AppState,
-    client_message: ClientMessage,
-    client_tx: &mpsc::UnboundedSender<String>,
-) -> Result<(), String> {
+pub async fn handle_message(state: &AppState,client_message: ClientMessage,client_tx: &mpsc::UnboundedSender<String>,) -> Result<(), String> {
     let mut game = state.game.lock().await;
     let recv_state = state.clone();
 
     match client_message {
+
         ClientMessage::StartGame => {
             if !*recv_state.game_started.lock().await {
                 *recv_state.game_started.lock().await = true;
@@ -183,6 +181,7 @@ pub async fn handle_message(
                 );
             }
         }
+
         ClientMessage::ResetGame => {
             println!("Starte zrücksetzen");
             *game = Game::new();
@@ -198,6 +197,7 @@ pub async fn handle_message(
             );
             println!("Zurüclsetzen beendet");
         }
+
         ClientMessage::EndGame => {
             println!("Beende Spiel und Server");
             let _ = recv_state.tx.send(
@@ -230,6 +230,7 @@ pub async fn handle_message(
                 );
             }
         }
+
         ClientMessage::IngameBereit { username, ready } => {
             if game.phase == Phase::Spielbeginn {
                 if let Some(player) = game.players.iter_mut().find(|p| p.name == username) {
@@ -243,6 +244,7 @@ pub async fn handle_message(
                 log::error!("Spieler bereits alle bereit")
             }
         }
+
         ClientMessage::AddUser { username } => {
             if *state.game_started.lock().await {
                 log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
@@ -334,6 +336,7 @@ pub async fn handle_message(
                 log::info!("Seher gerade nicht dran");
             }
         }
+
         ClientMessage::HexenAction {
             direction,
             hexen_aktion,
@@ -341,6 +344,7 @@ pub async fn handle_message(
         } => {
             let _ = game.hexe_arbeitet(hexen_aktion, &direction.actor, extra_target);
         }
+
         ClientMessage::AmorAction {
             actor: _,
             target1,
@@ -352,6 +356,7 @@ pub async fn handle_message(
                 log::info!("Amor gerade nicht dran")
             }
         }
+
         ClientMessage::DoktorAction { direction } => {
             if game.phase == Phase::DoktorPhase {
                 match direction.target {
@@ -367,9 +372,11 @@ pub async fn handle_message(
                 log::error!("Doktor gerade nicht dran")
             }
         }
+
         ClientMessage::PriesterAction { actor, target } => {
             let _ = game.priester_wirft(&actor, target);
         }
+
         ClientMessage::JaegerAction { actor: _, target } => {
             game.jaeger_ziel = target;
         }
@@ -391,6 +398,7 @@ pub async fn send_game_state(state: &AppState) {
     let game = state.game.lock().await;
     let game_started = state.game_started.lock().await;
     let win = game.check_win();
+
     let message = json!({
         "type": "GAME_STATE",
         "state": {
@@ -419,9 +427,7 @@ pub async fn send_game_state(state: &AppState) {
         serde_json::to_string(&message).expect("Fehler beim Serialisieren des GameState");
     let _ = state.tx.send(message_str);
 
-    if let Some(winner) = win
-        && *game_started
-    {
+    if let Some(winner) = win && *game_started {
         let winner_message = json!({
             "type": "WINNER",
             "winner": format!("{:?}", winner)
@@ -464,10 +470,7 @@ pub async fn index(State(state): State<AppState>) -> Html<String> {
     Html(template.render().unwrap())
 }
 
-pub async fn show_user(
-    Path(username): Path<String>,
-    State(state): State<AppState>,
-) -> Html<String> {
+pub async fn show_user(Path(username): Path<String>,State(state): State<AppState>,) -> Html<String> {
     let game = state.game.lock().await;
 
     let rolle = match game.rolle_von(&username) {
@@ -516,12 +519,7 @@ pub async fn show_user(
     Html(template.render().unwrap())
 }
 
-async fn handle_vote(
-    game: &mut Game,
-    actor: String,
-    target: String,
-    action: ActionKind,
-) -> Result<(), String> {
+async fn handle_vote(game: &mut Game,actor: String,target: String,action: ActionKind) -> Result<(), String> {
     if let Some(_player) = game.players.iter_mut().find(|p| p.name == target) {
         if let Some(_player) = game
             .players
@@ -620,10 +618,12 @@ async fn handle_vote(
 
     Ok(())
 }
+
 pub async fn join_page() -> Html<String> {
     let template = JoinTemplate {};
     Html(template.render().unwrap())
 }
+
 pub async fn play_page(Path(token): Path<String>, State(state): State<AppState>) -> Html<String> {
     let play_dev = state.play_dev.lock().await;
     if let Some(player) = play_dev.iter().find(|p| p.token == token) {
