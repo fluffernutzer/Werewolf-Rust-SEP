@@ -234,6 +234,9 @@ pub async fn handle_message(
             }
 
             if game.players.iter().all(|p| p.ready_state) {
+                if game.players.len() < 3 {
+                    return Err("Noch nicht genug Spieler im Spiel".to_string());
+                }
                 *recv_state.game_started.lock().await = true;
 
                 game.phase = Phase::Spielbeginn;
@@ -271,9 +274,9 @@ pub async fn handle_message(
             if game.players.iter().any(|p| p.name == username) {
                 return Err("Name existiert bereits".to_string());
             }
-            if *state.game_started.lock().await {
-                log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
-                //return //Err("Aktuell können keine Spieler mehr der Runde beitreten");
+            if game.players.len() == 16 {
+                //log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
+                return Err("Die Runde ist bereits voll".to_string());
             }
             let token = uuid::Uuid::new_v4().to_string();
 
@@ -435,6 +438,8 @@ pub async fn send_game_state(state: &AppState) {
             "eligible_players": game.eligible_players,
             "current_votes": game.current_votes,
             "ongoing_vote": game.ongoing_vote,
+            "liebender1": game.liebender_1,
+            "liebender2": game.liebender_2,
         }
     });
 
@@ -579,14 +584,9 @@ async fn handle_vote(
         .filter(|p| {
             p.lebend
                 && match game.phase {
-                    Phase::Spielbeginn => false,
                     Phase::Tag => true,
                     Phase::WerwölfePhase => p.rolle == Rolle::Werwolf,
-                    Phase::SeherPhase => p.rolle == Rolle::Seher,
-                    Phase::HexePhase => p.rolle == Rolle::Hexe,
-                    Phase::AmorPhase => p.rolle == Rolle::Amor,
-                    Phase::PriesterPhase => p.rolle == Rolle::Priester,
-                    Phase::DoktorPhase => p.rolle == Rolle::Doktor,
+                    _ => false,
                 }
         })
         .map(|p| p.name.clone())
