@@ -153,7 +153,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
 
             drop(game);
 
-            send_game_state(&recv_state).await;
+            send_game_state(&recv_state).await; //Update an alle Clienst nach jeder bearbeiteten ClientMessage 
         }
     });
 
@@ -255,8 +255,6 @@ pub async fn handle_message(state: &AppState,client_message: ClientMessage,clien
             if game.players.iter().any(|p| p.name == username) {
                 return Err("Name existiert bereits".to_string());
             }
-            if *state.game_started.lock().await {
-                log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
             if game.players.len() == 16 {
                 //log::error!("Aktuell können keine Spieler mehr der Runde beitreten");
                 return Err("Die Runde ist bereits voll".to_string());
@@ -284,7 +282,7 @@ pub async fn handle_message(state: &AppState,client_message: ClientMessage,clien
                 if game
                     .players
                     .iter_mut()
-                    .any(|p| p.name == direction.target.clone().unwrap() && p.lebend)
+                    .any(|p| p.name == direction.target.clone().unwrap() && p.lebend) //actor.lebend wird in handle_vote überprüft
                 {
                     match direction.target {
                         Some(target) => {
@@ -311,7 +309,7 @@ pub async fn handle_message(state: &AppState,client_message: ClientMessage,clien
                 if game
                     .players
                     .iter_mut()
-                    .any(|p| p.name == direction.target.clone().unwrap() && p.lebend)
+                    .any(|p| p.name == direction.target.clone().unwrap() && p.lebend) //actor.lebend wird in handle_vote überprüft
                 {
                     match direction.target {
                         Some(target) => {
@@ -400,7 +398,7 @@ pub async fn handle_message(state: &AppState,client_message: ClientMessage,clien
     Ok(())
 }
 
-pub async fn send_game_state(state: &AppState) {
+pub async fn send_game_state(state: &AppState) { //nach jeder bearbeiteten Client-message -> vollständiger neuer Spielstand an alle Clients schicken 
     let game = state.game.lock().await;
     let game_started = state.game_started.lock().await;
     let win = game.check_win();
@@ -437,7 +435,7 @@ pub async fn send_game_state(state: &AppState) {
 
     if let Some(winner) = win && *game_started {
         let winner_message = json!({
-            "type": "WINNER",
+            "type": "WINNER",                   // löst imm Browser neue Seitendarstellung aus 
             "winner": format!("{:?}", winner)
         });
         let winner_message_str = serde_json::to_string(&winner_message)
@@ -548,12 +546,12 @@ async fn handle_vote(game: &mut Game,actor: String,target: String,action: Action
     } else {
         return Err("Spieler nicht gefunden oder nicht lebendig".to_string());
     }
-
+ 
     game.votes
         .entry(target.to_string())
         .or_default()
         .push(actor.to_string());
-    game.ongoing_vote = true;
+    game.ongoing_vote = true; // True bis Abstimmung erfolgreich -> Clientseitige Verarbeitung für Darstellung
 
     game.eligible_players = game
         .players
@@ -563,13 +561,13 @@ async fn handle_vote(game: &mut Game,actor: String,target: String,action: Action
                 && match game.phase {
                     Phase::Tag => true,
                     Phase::WerwölfePhase => p.rolle == Rolle::Werwolf,
-                    _ => false,
+                    _ => false, // Andere Rollen/Phasen benötigen keine Abstimmung 
                 }
         })
         .map(|p| p.name.clone())
         .collect();
 
-    game.current_votes = game.votes.clone();
+    game.current_votes = game.votes.clone(); //Wird an Cleints übermittelt um alle bereits abgebenen Stimmen anzuzeigen 
 
     let all_voted = game.eligible_players.iter().all(|name| {
         game.players
@@ -579,22 +577,22 @@ async fn handle_vote(game: &mut Game,actor: String,target: String,action: Action
     });
 
     if all_voted {
-        let max_votes = game.votes.values().map(|v| v.len()).max().unwrap_or(0);
-        let candidates: Vec<String> = game
+        let max_votes = game.votes.values().map(|v| v.len()).max().unwrap_or(0); //Maximale Zahl erhaltener Stimmen 
+        let candidates: Vec<String> = game //Vektor mit Spielern welche maximale Anzahl an Stimmen erhalten haben 
             .votes
             .iter()
             .filter(|(_, voters)| voters.len() == max_votes)
             .map(|(target, _)| target.clone())
             .collect();
 
-        if candidates.len() > 1 {
+        if candidates.len() > 1 { //Falls mehrere Spieler maximale Anzahl an Stimmen haben -> Gleichstand 
             game.votes.clear();
             for player in game.players.iter_mut() {
                 if game.eligible_players.contains(&player.name) {
                     player.has_voted = false;
                 }
             }
-            game.current_votes = candidates.into_iter().map(|c| (c, Vec::new())).collect();
+            game.current_votes = candidates.into_iter().map(|c| (c, Vec::new())).collect(); //Abstimmung wird wiederholt (Gleichstand)
             return Ok(());
         }
 
@@ -615,7 +613,7 @@ async fn handle_vote(game: &mut Game,actor: String,target: String,action: Action
                 }
             }
             game.current_votes.clear();
-            game.ongoing_vote = false;
+            game.ongoing_vote = false; 
         }
     }
 
