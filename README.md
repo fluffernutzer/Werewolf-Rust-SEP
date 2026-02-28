@@ -10,4 +10,4 @@ Um die Anwendung zu starten:
 
 
 
-Für die Implementierung wurde LeChat(MistralAI) verwendet(Hauptsächlich für Darstellungsverbesserungen in der Datei user.html, sowie Recherchezwecke).
+Für die Implementierung wurde LeChat(MistralAI) verwendet(Hauptsächlich für Darstellungsverbesserungen in der Datei user.html, sowie Recherchezwecke). Ebenfalls verwendet für Recherchezwecke Microsoft Copilot.
