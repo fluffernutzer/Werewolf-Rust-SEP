@@ -1,21 +1,9 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-//use std::fmt::Display;
-//use futures::future::err;
-//use log::info;
-//use std::fmt::Display;
-//use futures::future::err;
-//use log::info;
-//use std::fmt::Display;
-////use futures::future::err;
-////use log::info;
 use rand::seq::SliceRandom;
-//use serde::Serialize;
 use rand::rng;
-//use serde::Serialize;
 use crate::roles::Rolle;
 use crate::roles::Team;
-//use rand::rng;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Phase {
@@ -263,7 +251,6 @@ impl Game {
             if let Some(p) = self.players.iter().find(|p| p.name == liebespartner_name) {
                 if p.lebend {
                     log::info!("{} stirbt vor Kummer.", liebespartner_name);
-                    //println!("{} stirbt vor Kummer.", liebespartner_name);
                     self.spieler_stirbt(&liebespartner_name);
                 }
             }
@@ -272,7 +259,6 @@ impl Game {
 
         if let Some(winner) = self.check_win() {
             log::info!("SPIEL BEENDET: {:?} gewinnt!", winner);
-            //println!("SPIEL BEENDET: {:?} gewinnt!", winner);
         }
     }
 
