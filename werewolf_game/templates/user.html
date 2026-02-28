@@ -538,7 +538,7 @@
                 alert("Das Spiel wurde beendet. Du kannst die Seite schließen.")
                 socket.close();
             }
-        if (data.type === "GAME_STATE") {
+        if (data.type === "GAME_STATE") { //Wird nach jeder erfolgreich verarbeiteten ClientMessage neu gesendet 
           const usersList = document.getElementById("users");
           usersList.innerHTML = data.state.players
             .map(p => `<li>${p.name} <span class="status ${p.status ? 'alive' : 'dead'}">${p.status ? '❤️ lebendig' : '💀 tot'}</span></li>`)
@@ -546,7 +546,7 @@
           document.getElementById("phase").textContent = data.state.phase;
 
           // Prüfe, ob der aktuelle Spieler Liebender ist
-            const username = "{{ username }}"; // Template-Variable
+            const username = "{{ username }}"; 
             const isLiebender =
             (data.state.liebender1 && data.state.liebender1 === username) ||
             (data.state.liebender2 && data.state.liebender2 === username);
@@ -567,7 +567,7 @@
                 (data.state.phase === "HexePhase" && "{{ rolle }}" === "Hexe") ||
                 (data.state.phase === "Tag") 
             ) {
-                const phaseElement = document.getElementById("phase");
+                const phaseElement = document.getElementById("phase"); //Signalisiert Spielenden, wenn sie dran sind 
                 phaseElement.classList.add("phase-highlight");
                 setTimeout(() => {
                     phaseElement.classList.remove("phase-highlight");
@@ -590,7 +590,7 @@
             `)
             .join("");
             } else {
-            votingButtonsDiv.style.display = "none";
+            votingButtonsDiv.style.display = "none"; //Voting-Buttons werden nur bei laufender abstimmung angezeigt 
             }
             const votingButtonsWerwolf = document.getElementById("voting-buttons-werwolf");
             const votingOptionsWerwolf = document.getElementById("voting-options-werwolf");
@@ -607,7 +607,7 @@
                 `)
                 .join("");
             } else if (votingButtonsWerwolf) {
-            votingButtonsWerwolf.style.display = "none";
+            votingButtonsWerwolf.style.display = "none";//Voting-Buttons werden nur bei laufender abstimmung angezeigt 
             }
 
           if (data.state.last_seher_result) {
@@ -651,6 +651,7 @@ function sendAction(type, targetOrId) {
     document.getElementById('welcome-message').style.display = 'none';
     return;
   }
+  //Rollen brauchen jeweils spezielle Nachrichten Typen -> Wird ab hier in If-Cases geregelt 
 if (type === "AmorAction") {
     message = {
       type: type,
@@ -755,8 +756,8 @@ if (type === "AmorAction") {
     };
   }
   else if (type === "WerwolfAction") {
-    const target = (typeof targetOrId === "string" && targetOrId !== "werwolf-target")
-      ? targetOrId
+    const target = (typeof targetOrId === "string" && targetOrId !== "werwolf-target") 
+      ? targetOrId //da über voting-buttons oder reguläre buttons(basisfall mit id) abgestimmt werden kann -> targetOrID genutzt
       : document.getElementById("werwolf-target").value;
     message = {
       type: type,
@@ -770,7 +771,7 @@ if (type === "AmorAction") {
   }
   else if (type === "TagAction") {
     const target = (typeof targetOrId === "string" && targetOrId !== "tag-target")
-      ? targetOrId
+      ? targetOrId//da über voting-buttons oder reguläre buttons(basisfall mit id) abgestimmt werden kann -> targetOrID genutzt
       : document.getElementById("tag-target").value;
     message = {
       type: type,
@@ -826,7 +827,7 @@ function toggleOpferAuswahl() {
   const opferAuswahl = document.getElementById("opferAuswahl");
   if (hexenAction === "Vergiften") {
     opferAuswahl.style.display = "block";
-    updateZielId();
+    updateZielId(); // setzt zielID , welchenur bei vergiften übergeben werden muss
   } else {
     opferAuswahl.style.display = "none";
     document.getElementById("zielId").value = "";
@@ -840,7 +841,7 @@ function updateZielId() {
 
 
 
-    function showWinnerPage(winner) {
+    function showWinnerPage(winner) { //Anzeige bei GameState mit Some(winner) -> spiel beendet 
       document.body.innerHTML = `
         <!DOCTYPE html>
         <html lang="de">
