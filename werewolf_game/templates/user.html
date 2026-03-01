@@ -296,6 +296,7 @@
         {% elif rolle == "Amor" %}🏹
         {% elif rolle == "Doktor" %}💉
         {% elif rolle == "Priester" %}✝️
+        {% elif rolle == "Jäger" %}🦌
         {% else %}🌑
         {% endif %}
       </span>
@@ -316,6 +317,8 @@
         <p>„Du hast den Eid geschworen, Leben zu retten. Jede Nacht kannst du einen Spieler vor dem Tod bewahren. Aber hüte dich! Du kannst dich nicht selbst schützen.“</p>
       {% elif rolle == "Priester" %}
         <p>„Dein Weihwasser brennt in den Adern der Dunklen. Wirf es auf einen Spieler; wenn er ein Werwolf ist, stirbt er. Aber wenn du verfehlst, stirbst du!“</p>
+      {% elif rolle == "Jäger" %}
+        <p>„Du lebst für die Jagd und stirbst niemals wehrlos. Wenn du fällst, reißt du einen anderen mit dir ins Dunkel. Wähle dein letztes Ziel mit Bedacht, denn dein Abschuss entscheidet über Sieg oder Verderben.“</p>
       {% else %}
         <p>„Du bist ein einfaches Dorfmitglied. Du hast keine besonderen Kräfte, nur deine Stimme am Tag. Mögen die Götter dich beschützen und rechtleiten.“</p>
       {% endif %}
@@ -426,8 +429,8 @@
     </div>
     {% elif rolle == "Jäger" %}
     <div>
-      <h3>Jäger-Aktion</h3>
-      <p>Wähle einen Spieler den du im fall deines Todes mit dir nehmen willst</p>
+      <h3>🦌Jäger</h3>
+      <p>Wähle einen Spieler den du im Fall deines Todes mit dir nehmen willst</p>
       <select id="jaeger-target">
         {% for player in players %}
           <option value="{{ player.name }}">{{ player.name }}</option>
