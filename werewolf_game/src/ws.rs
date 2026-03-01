@@ -107,7 +107,7 @@ pub enum ActionKind {
     DorfLyncht,
     WerwolfFrisst,
 }
-
+// Jeder Client bekommt seine eigen WebSocket Verbindung
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
@@ -115,9 +115,11 @@ pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> 
 async fn handle_socket(socket: WebSocket, state: AppState) {
 
     let (mut sender, mut receiver) = socket.split();
+    //für nachrichten, die nur an einen Client gehen
     let (client_tx, mut client_rx) = mpsc::unbounded_channel::<String>();
+    // Broadcastschannel für nachrichten an alle Clients
     let mut rx = state.tx.subscribe();
-
+    // versenden von Nachrichten
     let send_task = tokio::spawn(async move {
         loop {
             tokio::select! {
@@ -138,7 +140,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     });
 
     let recv_state = state.clone();
-
+    //empfangen von Nachrichten
     let recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(text))) = receiver.next().await {
             let Ok(client_message) = serde_json::from_str::<ClientMessage>(&text) else {
@@ -181,7 +183,7 @@ pub async fn handle_message(state: &AppState,client_message: ClientMessage,clien
                 );
             }
         }
-
+        //Setzt alle zurück, Server bleibt aktiv
         ClientMessage::ResetGame => {
             println!("Starte zrücksetzen");
             *game = Game::new();
@@ -197,7 +199,7 @@ pub async fn handle_message(state: &AppState,client_message: ClientMessage,clien
             );
             println!("Zurüclsetzen beendet");
         }
-
+        //löst Graceful shutdown aus
         ClientMessage::EndGame => {
             println!("Beende Spiel und Server");
             let _ = recv_state.tx.send(
@@ -444,7 +446,7 @@ pub async fn send_game_state(state: &AppState) { //nach jeder bearbeiteten Clien
         let _ = state.tx.send(winner_message_str);
     }
 }
-
+//Startseite
 pub async fn index(State(state): State<AppState>) -> Html<String> {
     let game = state.game.lock().await;
     let qr_svg = generate_qr(&state.server_ip);
@@ -619,12 +621,12 @@ async fn handle_vote(game: &mut Game,actor: String,target: String,action: Action
 
     Ok(())
 }
-
+// Weiterleitung von qr code für mobile Geräte
 pub async fn join_page() -> Html<String> {
     let template = JoinTemplate {};
     Html(template.render().unwrap())
 }
-
+// Seite für mobile Geräte
 pub async fn play_page(Path(token): Path<String>, State(state): State<AppState>) -> Html<String> {
     let play_dev = state.play_dev.lock().await;
     if let Some(player) = play_dev.iter().find(|p| p.token == token) {

@@ -25,6 +25,7 @@ struct PlayerDevice {
     name: String,
     token: String,
 }
+//zentrale Struktur, die alle wichtigen Daten spiechert
 #[derive(Clone)]
 struct AppState {
     game: Arc<Mutex<Game>>,
@@ -40,7 +41,7 @@ struct AppState {
 
 async fn main() {
     let (tx, _rx) = broadcast::channel(32);
-    let (endgame_tx, endgame_rx) = tokio::sync::oneshot::channel::<()>();
+    let (endgame_tx, endgame_rx) = tokio::sync::oneshot::channel::<()>(); // Zum beenden nötig
     let ip = local_ip().unwrap().to_string();
     let tx_1 = tx.clone();
     
@@ -58,11 +59,11 @@ async fn main() {
     };
 
     let app = Router::new()
-        .route("/", get(ws::index))
-        .route("/join", get(ws::join_page))
-        .route("/play/:token", get(ws::play_page))
-        .route("/:username", get(ws::show_user))
-        .route("/ws", get(ws::ws_handler))
+        .route("/", get(ws::index))//Startseite
+        .route("/join", get(ws::join_page))//QR Code beitritts seite
+        .route("/play/:token", get(ws::play_page))//Spieler seite auf mobilem gerät
+        .route("/:username", get(ws::show_user))//Spieler Seite in Browser tab
+        .route("/ws", get(ws::ws_handler))//Websocket Endpunkt
         .with_state(state);
 
     log::info!("Server läuft auf http://127.0.0.1:7878");
@@ -76,7 +77,7 @@ async fn main() {
         .await
         .unwrap();
 }
-
+// Erstellt QR Code
 fn generate_qr(ip: &str) -> String {
     let url = format!("http://{}:7878/join", ip);
     let code = QrCode::new(url.as_bytes()).unwrap();
